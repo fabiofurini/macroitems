@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+title: "macroitems: the LP relaxation of the precedence-constrained knapsack problem through parametric maximum closure"
+message: "If you use this software, please cite the companion papers (to appear)."
+authors:
+  - family-names: Dose
+    given-names: Valerio
+  - family-names: Furini
+    given-names: Fabio
+  - family-names: Locatelli
+    given-names: Marco
+version: 0.1.0-pilot
+date-released: 2026-09-04

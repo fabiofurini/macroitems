@@ -1,0 +1,6 @@
+{
+ "generator": "random_dag",
+ "n": 2000,
+ "avg_out_degree": 2.0,
+ "seed": 1
+}

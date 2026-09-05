@@ -1,0 +1,9 @@
+{
+ "generator": "layered_grid",
+ "nx": 36,
+ "ny": 36,
+ "nz": 11,
+ "cone": 9,
+ "seed": 2,
+ "ore_blocks": 1932
+}
