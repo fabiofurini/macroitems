@@ -7,3 +7,6 @@ pilot/pilot.log
 .pytest_cache/
 .hypothesis/
 *.egg-info/
+
+# hypothesis cache
+.hypothesis/
