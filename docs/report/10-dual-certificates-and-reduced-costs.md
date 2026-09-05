@@ -44,10 +44,16 @@ canonical ones, and on real instances they are larger by a wide margin.
 
 | | |
 |---|---|
-| median gain, across the 23 benchmark instances | **×44.5** |
-| per-instance median gain, range | ×27.9 (V_10001_63944) to ×160.6 (U_6494_48626) |
-| cost of the canonical dual certificate | 1–37 ms |
-| cost of the face-wide reduced costs | 0.8–19 s (one minimum cut per item) |
+| median gain, 23 benchmark instances | **×44.5** (range ×27.9 – ×160.6) |
+| median gain, 8 open-pit instances | **×130.9** (range ×15.6 – ×295.6) |
+| cost of the canonical dual certificate | 1 ms – 0.4 s |
+| cost of the face-wide reduced costs | 0.03 s – 333 s (one minimum cut per item) |
+
+The gain is three times larger on the open-pit instances than on the
+benchmark, and the benchmark's own mining family sits between the two. That
+is the mechanism stated plainly: the denser the precedence graph, the more a
+forced item drags in with it, and the further the face-wide value can climb
+above the item's own `w_i|λ_r − λ_h|`.
 
 Since a reduced cost fixes a variable only when it exceeds the gap between the
 relaxation and an incumbent, a factor of forty is the difference between a
@@ -71,11 +77,22 @@ affordable exactly when the split macroitem is small — the common case.
 On the running example: `dim X* = 0` (the primal optimum is unique) and
 `dim D* = 3`, matching the companion note.
 
-On the benchmark the primal optimum is unique on **all 23 instances** —
-`k₀ = 1` and `dim X* = 0` throughout. Intermediate optimal closures, the only
-thing that can make the primal face positive-dimensional, do not occur there
-at all. The dual faces are correspondingly large: `dim D*` runs from 1 482 to
-75 812. Since intermediate optimal closures trade primal degrees of freedom
-for dual ones, these are exactly the instances where the face-wide reduced
-costs have the most room to improve on the canonical ones — which is what the
-factor of forty above reflects.
+Across the whole study the primal optimum is unique on **28 of the 29
+instances** where the dimensions are computable: `k₀ = 1` and `dim X* = 0` on
+all 23 benchmark instances and on five of the six open-pit ones.
+
+The exception is `zuck_large`, with `k₀ = 2` and `dim X* = 1`: its split
+macroitem does admit an intermediate optimal closure, so the optimal face is a
+segment rather than a point. It is the one instance in the collection where
+the primal optimum is genuinely not unique — and, as the theory requires, its
+dual face is the largest measured, `dim D* = 1 030 216`.
+
+Everywhere else the dual faces are large too — `dim D*` from 1 482 to 632 075
+— which is exactly the room the face-wide reduced costs exploit. Intermediate
+optimal closures trade primal degrees of freedom for dual ones, and on these
+instances there are almost none to trade.
+
+(`|H|` exceeds the computation's threshold on w23, zuck_medium,
+mclaughlin_limit and kd, so the dimensions are not reported there; the first
+two have split macroitems of 24 769 and 12 711 items, the last two have no
+capacity declared by the instance.)
