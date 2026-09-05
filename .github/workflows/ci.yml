@@ -1,0 +1,46 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          # ortools and igraph are the optional maximum-flow backends; highspy
+          # is the open-source LP baseline.  They are installed here so that
+          # the backend-agreement tests actually have something to compare.
+          pip install -e ".[test]" ortools python-igraph highspy
+      - name: Test
+        run: pytest -q -m "not slow"
+      - name: Command line works
+        run: |
+          macroitems info running-example
+          macroitems path running-example --check
+          macroitems solve running-example --capacity 4 --dual --faces
+
+  slow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[test]" ortools python-igraph highspy
+      - run: pytest -q
