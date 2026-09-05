@@ -13,4 +13,4 @@ from .faces import face_dimensions
 # the public implementation misses breakpoints (see macroitems/pseudoflow_path.py).
 from .pseudoflow_path import canonical_path_pseudoflow, pseudoflow_available
 
-__version__ = "0.2.0.dev0"
+__version__ = "0.2.0"

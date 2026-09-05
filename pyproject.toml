@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "macroitems"
-version = "0.2.0.dev0"
+version = "0.2.0"
 description = "The LP relaxation of the precedence-constrained knapsack problem through parametric maximum closure: canonical macroitem sequences, dual certificates, and optimal-face dimensions"
 readme = "README.md"
 license = "MIT"

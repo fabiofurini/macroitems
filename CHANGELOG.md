@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0 (unreleased)
+## 0.2.0 — 5 September 2026
 
 First public version. Everything below is relative to the internal 0.1.0
 pilot.
