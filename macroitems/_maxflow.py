@@ -15,7 +15,9 @@ Three backends are available:
     capacities are required; non-integer input is rejected rather than
     silently rounded.
 ``scipy``
-    ``scipy.sparse.csgraph.maximum_flow``, also int64.
+    ``scipy.sparse.csgraph.maximum_flow``, integer as well but internally
+    ``int32``: capacities above ``2**31 - 1`` are rejected rather than
+    truncated (scipy truncates them silently and returns a wrong flow).
 
 The default is chosen by :func:`default_backend`: ``ortools`` when available
 (exact and fast), otherwise ``igraph``, otherwise ``scipy``.  Backends are
@@ -27,6 +29,7 @@ from __future__ import annotations
 import numpy as np
 
 _AVAILABLE: dict[str, bool] = {}
+_INT32_MAX = int(np.iinfo(np.int32).max)
 
 
 def _have(name: str) -> bool:
@@ -118,6 +121,12 @@ class MaxFlowNetwork:
         uniq, inverse = np.unique(key, return_inverse=True)
         merged = np.zeros(uniq.size, dtype=np.int64)
         np.add.at(merged, inverse, cap)
+        # scipy's maximum_flow works in int32 and truncates larger capacities
+        # *silently*, returning a wrong flow; refuse them instead.
+        if merged.max(initial=0) > _INT32_MAX:
+            raise ValueError(
+                f"backend 'scipy' works in int32 but got a capacity of "
+                f"{int(merged.max())}; use the ortools or igraph backend")
         g = csr_matrix((merged, (uniq // self.n_nodes, uniq % self.n_nodes)),
                        shape=(self.n_nodes, self.n_nodes), dtype=np.int64)
         res = maximum_flow(g, int(s), int(t))

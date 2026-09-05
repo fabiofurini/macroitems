@@ -257,6 +257,16 @@ def solution_from_path(inst: Instance, path: MacroitemPath, c: float) -> LPSolut
     """Canonical optimum at capacity c read off a precomputed path (no max flow)."""
     n = inst.n
     q = path.q
+    if c <= 0:
+        # x = 0 is the only feasible point (weights are positive); split_index
+        # would return h = 0 here, and closure_mask(n, h - 1) would wrap around.
+        F = np.zeros(n, dtype=bool)
+        H = np.zeros(n, dtype=bool)
+        lam = 0.0
+        if q > 0:
+            H[path.macroitems[0]] = True       # the split macroitem as c -> 0+
+            lam = float(path.ratios[0])
+        return LPSolution(np.zeros(n), 0.0, lam, F, H, ~(F | H), 0.0, int(H.any()), 0, 0.0)
     if q == 0 or c >= path.W[q]:
         F = path.closure_mask(n, q)
         return LPSolution(F.astype(float), float(path.P[q]), 0.0, F, np.zeros(n, bool), ~F, 1.0, q, 0, 0.0, "slack")

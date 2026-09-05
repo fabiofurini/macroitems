@@ -79,12 +79,14 @@ def main():
             l = solve_lp(inst, c, time_limit=lim)
             d = canonical_dual(inst, s, c)
             row = dict(instance=name, f=f, c=c, newton_maxflow=s.n_maxflow, newton_seconds=s.seconds,
-                       highs_seconds=l.seconds, highs_status=l.status, z_newton=s.value, z_highs=l.value,
-                       rel_diff=abs(s.value - l.value) / max(1.0, abs(l.value)) if l.status == 0 else np.nan,
+                       highs_build_seconds=l.seconds_build, highs_seconds=l.seconds_solve,
+                       highs_status=l.status, z_newton=s.value, z_highs=l.value,
+                       rel_diff=abs(s.value - l.value) / max(1.0, abs(l.value)) if l.status == "optimal" else np.nan,
                        lam_newton=s.lam, lam_highs=l.lam, size_H=int(s.H.sum()), theta=s.theta,
                        dual_feasible=d.feasible, dual_value=d.value)
             timing_rows.append(row)
-            log(f"   c={f:.2f}W_q: newton {s.n_maxflow} mf {s.seconds:.3f}s | highs {l.seconds:.2f}s status {l.status} | "
+            log(f"   c={f:.2f}W_q: newton {s.n_maxflow} mf {s.seconds:.3f}s | "
+                f"highs build {l.seconds_build:.2f}s solve {l.seconds_solve:.2f}s status {l.status} | "
                 f"z {s.value:.3f} vs {l.value:.3f} | |H|={int(s.H.sum())} theta={s.theta:.3f} dual ok={d.feasible}")
         # ---- structural statistics on a capacity grid
         rows = structural_stats(inst, path, faces_max_H=3000 if inst.n <= 15000 else 1500)
