@@ -20,6 +20,7 @@ import dataclasses
 import time
 
 import numpy as np
+from math import gcd
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import connected_components
 
@@ -43,6 +44,10 @@ class FaceInfo:
     seconds: float
 
 
+def _is_integral(a: np.ndarray) -> bool:
+    return bool(np.all(a == np.rint(a)))
+
+
 def face_dimensions(inst: Instance, sol: LPSolution, max_H: int = 20000) -> FaceInfo:
     t0 = time.perf_counter()
     F, H, Z = sol.F, sol.H, sol.Z
@@ -55,7 +60,18 @@ def face_dimensions(inst: Instance, sol: LPSolution, max_H: int = 20000) -> Face
     if k > max_H:
         raise ValueError(f"|H| = {k} too large for the tight-set computation (max_H={max_H})")
     sub, _ = inst.induced(nodes)
-    v = sub.p - sol.lam * sub.w
+    # The tight sets are the same under any positive scaling of the node
+    # values, and on integer data lambda_h is the rational p(H)/w(H), so
+    # multiplying by w(H) makes v_i = w(H) p_i - p(H) w_i an integer.  That
+    # keeps the computation exact and lets an integer maximum-flow backend
+    # carry it; the floating-point form would need the optional igraph one.
+    den = 1.0
+    if _is_integral(inst.p) and _is_integral(inst.w):
+        num_h, den_h = float(inst.p[H].sum()), float(inst.w[H].sum())
+        if den_h != 0 and abs(num_h / den_h - sol.lam) <= 1e-9 * max(1.0, abs(sol.lam)):
+            g = gcd(int(round(abs(num_h))), int(round(abs(den_h)))) or 1
+            den = abs(den_h) / g
+    v = np.rint(sub.p * den - (sol.lam * den) * sub.w) if den != 1.0 else sub.p - sol.lam * sub.w
     solver = ClosureSolver(sub)
     # minimal tight set containing each item
     T = np.zeros((k, k), dtype=bool) if k <= 4000 else None
