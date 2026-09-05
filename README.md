@@ -87,10 +87,10 @@ Newton search on the weight price and costs a handful of maximum flows.
 ### Command line
 
 ```bash
-macroitems info      instances/kd
-macroitems path      instances/kd --check --json kd_path.json
-macroitems solve     instances/kd --capacity 0.5 --relative --dual --faces
-macroitems lp        instances/kd --capacity 0.5 --relative --solver highs
+macroitems info      running-example
+macroitems path      /path/to/minelib/kd --check --json kd_path.json
+macroitems solve     /path/to/minelib/kd --capacity 0.5 --relative --dual --faces
+macroitems lp        /path/to/minelib/kd --capacity 0.5 --relative --solver highs
 macroitems gen grid  --nx 36 --ny 36 --nz 11 --cone 9 --seed 2 --out grid.txt
 ```
 
@@ -107,19 +107,22 @@ macroitems gen grid  --nx 36 --ny 36 --nz 11 --cone 9 --seed 2 --out grid.txt
 | `first_macroitem_lawler` | Lawler's binary search, for comparison |
 | `macroitems.lp` | LP-solver baselines behind one interface (HiGHS, Gurobi, CPLEX) |
 | `macroitems.formats` | readers for MineLib and for the PCKP benchmark |
+| `macroitems.cli` | the `macroitems` command line |
 
 ## Correctness
 
-`pytest` runs 466 tests in about a minute. They are not decorative: small
+`pytest` runs 773 tests in about a minute. They are not decorative: small
 instances are checked against a **brute-force reference in exact rational
 arithmetic** that enumerates every closure — `u(lambda)` and both lattice
 extremes at every breakpoint, the canonical sequence from its definition, the
 value function over a capacity grid, and persistency against the full optimal
 face. Property-based tests assert the invariants on hundreds of generated
-instances; the maximum-flow backends must agree; with no precedence arcs the
-theory must reduce to Dantzig's rule, checked against an independent
-implementation; and the LP baselines must agree with the combinatorial
-methods to `1e-9`.
+instances; the maximum-flow backends must agree; the LP baselines must agree
+with the combinatorial methods to `1e-9`; and the correspondences the theory
+claims with other literatures are checked by reimplementing *their*
+algorithms independently — Dantzig's greedy rule with no precedences, the
+subtree aggregation of Shaw and Cho on trees, and the reduced Sidney
+decomposition of Margot, Queyranne and Wang computed by brute force.
 
 ## Instances
 
