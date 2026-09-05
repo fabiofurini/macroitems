@@ -31,7 +31,7 @@ pilot.
   incomplete parametric family. See the module docstring for the
   three-item counterexample.
 * Experiments (`experiments/`), documentation (`docs/`), an experimental
-  report (`REPORT.md`) and a test suite of 773 tests.
+  report (`docs/report/`, fourteen pages) and a test suite of 773 tests.
 
 ### Fixed
 

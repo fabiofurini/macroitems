@@ -1,7 +1,12 @@
-# macroitems
+# macroitems — LP relaxation of the Precedence-Constrained Knapsack Problem
 
-**The LP relaxation of the precedence-constrained knapsack problem, solved
-through parametric maximum closure.**
+[![tests](https://github.com/fabiofurini/macroitems/actions/workflows/ci.yml/badge.svg)](https://github.com/fabiofurini/macroitems/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org)
+
+Python library, benchmark infrastructure and reproducible computational study
+for the LP relaxation of the precedence-constrained knapsack problem, solved
+through parametric maximum closure.
 
 ```
 max  p'x   s.t.   w'x <= c,   x_i <= x_j for every arc (i, j),   0 <= x <= 1
@@ -23,8 +28,21 @@ path form a canonical sequence of macroitems with strictly decreasing
 profit-to-weight ratios, and the relaxation becomes a knapsack LP on
 macroitems — earlier macroitems fully selected, **one** split, the rest null.
 
-It accompanies two papers by Valerio Dose, Fabio Furini and Marco Locatelli
-(see `CITATION.cff`).
+It accompanies two manuscripts by Valerio Dose, Fabio Furini and Marco
+Locatelli (see [`CITATION.cff`](CITATION.cff)).
+
+**→ [Browse the computational report](docs/report/)** — every table, figure and
+observation of the experimental study, as navigable pages.
+
+<p align="center">
+  <img src="experiments/results/figures/kd_value-function.png" alt="Value function and macroitems of the MineLib instance kd" width="620">
+</p>
+
+*MineLib `kd`: 14 153 blocks, 219 778 precedences. The upper panel is the value
+function `z(c)` of the relaxation, whose breakpoints are the cumulative
+macroitem points; the lower bar shows the 493 macroitems along the weight axis,
+shaded by ratio, the first one outlined. One call computes all of it — every
+capacity at once — in 1.2 seconds.*
 
 ## Why you might want it
 
@@ -57,7 +75,9 @@ pip install "macroitems[experiments]"     # + ortools, igraph, highspy, pandas, 
 ```
 
 The optional extras are all third-party software installed under their own
-licences; this package bundles none of it. See [docs/solvers.md](docs/solvers.md).
+licences; **this package bundles none of it**, which is how it can be MIT while
+being usable with GPL and commercial software. See
+[docs/solvers.md](docs/solvers.md).
 
 ## Use
 
@@ -135,18 +155,32 @@ the published files directly:
 * the **PCKP benchmark** (Park and Park 1997; Boland, Bley, Fricke, Froyland,
   Sotirov, *Math. Programming* 132, 2012) — `read_pckp_dat` and `read_pckp_lp`.
 
-See [docs/instances.md](docs/instances.md) for where to get them and what to
+See [Instances](docs/report/05-instances.md) for where to get them and what to
 watch out for in the files.
 
 ## Documentation
 
-* [docs/conventions.md](docs/conventions.md) — arc direction, tie convention,
-  regions, the dual, exact arithmetic. **Read this first**; most confusion in
-  this subject is a convention mismatch.
-* [docs/solvers.md](docs/solvers.md) — the optional backends, and the traps.
-* [docs/instances.md](docs/instances.md) — instance formats and provenance.
-* [REPORT.md](REPORT.md) — the full experimental report: environment,
-  protocol, every cross-check with numbers, and the results.
+**[The computational report](docs/report/)**, in fourteen pages:
+
+| | |
+|---|---|
+| [Summary](docs/report/01-summary.md) | the answer to "how should this be solved", in one page |
+| [What the library computes](docs/report/02-what-the-library-computes.md) | the objects and what they cost |
+| [Definitions and conventions](docs/report/03-definitions-and-conventions.md) | **read this first** — arc direction, tie convention, regions, exact arithmetic |
+| [Setup and protocol](docs/report/04-setup.md) | machine, versions, how the timings were taken |
+| [Instances](docs/report/05-instances.md) | where to get them, and what to watch out for in the files |
+| [Correctness](docs/report/06-correctness.md) | what the 773 tests actually check |
+| [Structure of real instances](docs/report/07-structure-of-real-instances.md) | persistency, and the gap problem measured |
+| [How best to solve it](docs/report/08-how-best-to-solve-it.md) | the method comparison |
+| [Accuracy](docs/report/09-accuracy.md) | where the LP solvers return a wrong value |
+| [Dual certificates and reduced costs](docs/report/10-dual-certificates-and-reduced-costs.md) | what the dual face buys |
+| [Parametric implementations](docs/report/11-parametric-implementations.md) | why no parametric row is reported |
+| [Weight against revenue factor](docs/report/12-weight-vs-revenue-factor.md) | the two nested pit families |
+| [Defects found](docs/report/13-defects-found.md) | six silent wrong answers, and what caught them |
+| [Reproducing this report](docs/report/14-reproducing-this-report.md) | commands and raw data |
+
+Plus [docs/solvers.md](docs/solvers.md) — the optional backends and their
+traps.
 
 ## Licence
 

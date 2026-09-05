@@ -1,6 +1,11 @@
-# Environment of the reported runs
+# Setup and protocol
 
-Every timing in `docs/report/` and in the CSV files of this directory was
+← [Definitions and conventions](03-definitions-and-conventions.md) · [Contents](README.md) · next: [Instances](05-instances.md)
+
+---
+
+
+Every timing in `REPORT.md` and in the CSV files of this directory was
 produced on this machine, single-threaded, with the versions below.
 
 ## Machine

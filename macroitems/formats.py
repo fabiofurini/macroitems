@@ -20,7 +20,7 @@ positive weights, profits of arbitrary sign:
     the ``.blocks``/``.prec``/``.upit`` triple of an ultimate-pit instance.
 
 None of these datasets is redistributed with this package; the readers take
-the files as published by their authors.  See ``docs/instances.md``.
+the files as published by their authors.  See ``docs/report/05-instances.md``.
 """
 from __future__ import annotations
 

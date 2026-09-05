@@ -1,4 +1,9 @@
-# Conventions
+# Definitions and conventions
+
+← [What the library computes](02-what-the-library-computes.md) · [Contents](README.md) · next: [Setup and protocol](04-setup.md)
+
+---
+
 
 Everything in this library follows one set of conventions, taken from the
 companion papers. They are stated here once, because most of the confusion in

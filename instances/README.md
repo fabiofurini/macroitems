@@ -25,5 +25,5 @@ drift from the generators.
 
 **Third-party instances are not redistributed.** MineLib and the PCKP
 benchmark belong to their authors; `macroitems.formats` reads their published
-files directly. See [../docs/instances.md](../docs/instances.md) for where to
+files directly. See [the Instances page](../docs/report/05-instances.md) for where to
 obtain them and what to watch out for in the files.

@@ -1,5 +1,10 @@
 # Instances
 
+← [Setup and protocol](04-setup.md) · [Contents](README.md) · next: [Correctness](06-correctness.md)
+
+---
+
+
 This repository redistributes **no third-party instance data**. The readers in
 `macroitems.formats` take the files as published by their authors, so you
 download them once and point the library at them. What follows is where to get
