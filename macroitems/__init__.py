@@ -10,4 +10,4 @@ from .lp import (LPResult, LPBackend, solve_lp, available_lp_backends, get_lp_ba
                  HighsBackend, ScipyBackend, GurobiBackend, CplexBackend)
 from .faces import face_dimensions
 
-__version__ = "0.1.0-pilot"
+__version__ = "0.2.0.dev0"
