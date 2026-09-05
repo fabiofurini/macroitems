@@ -32,7 +32,8 @@ It accompanies two manuscripts by Valerio Dose, Fabio Furini and Marco
 Locatelli (see [`CITATION.cff`](CITATION.cff)).
 
 **→ [Browse the computational report](docs/report/)** — every table, figure and
-observation of the experimental study, as navigable pages.
+observation of the experimental study, as navigable pages, or read it as a
+single document: [`report/computational_report.pdf`](report/computational_report.pdf).
 
 <p align="center">
   <img src="experiments/results/figures/kd_value-function.png" alt="Value function and macroitems of the MineLib instance kd" width="620">

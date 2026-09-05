@@ -3,7 +3,8 @@
 
 Valerio Dose · Fabio Furini · Marco Locatelli
 
-*Browsable edition of the experimental study accompanying the manuscript. Every
+*Browsable edition of [`report/computational_report.pdf`](../../report/computational_report.pdf),
+the experimental study accompanying the manuscript. Every
 table is generated from the raw CSV files in
 [`experiments/results/`](../../experiments/results/) by
 `experiments/make_tables.py`; no number is hand-typed.*
@@ -25,8 +26,10 @@ material a paper section cannot carry —
   settles almost nothing ([Structure of real instances](07-structure-of-real-instances.md));
 - why the public parametric minimum-cut implementation could not be included
   ([Parametric implementations](11-parametric-implementations.md));
-- the cross-validation the numbers rest on, including reimplementations of
-  three other communities' algorithms ([Correctness](06-correctness.md));
+- what was actually implemented, and what each of the 773 tests checks
+  ([What the library computes](02-what-the-library-computes.md),
+  [Correctness](06-correctness.md)) — including reimplementations of three
+  other communities' algorithms, used as independent references;
 - and the defects found on the way, all of which produced plausible wrong
   answers rather than errors ([Defects found](13-defects-found.md)).
 
