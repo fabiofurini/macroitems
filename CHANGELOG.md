@@ -52,6 +52,10 @@ deprecated MIT classifier made setuptools refuse the project.
 
 ### Changed
 
+* `canonical_path` and `solve_capacity` scale decimal data to integers
+  internally. Closures, macroitems and ratios are invariant under that
+  scaling, so the answer is unchanged, but the computation becomes exact and
+  no longer needs a floating-point maximum-flow backend.
 * `solve_capacity` reports `h=None` instead of `-1`: the Newton search does
   not enumerate the macroitems, so the index of the split one is genuinely
   unknown there. `solution_from_path` reports it.

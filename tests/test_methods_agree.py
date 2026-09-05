@@ -15,6 +15,8 @@ from fractions import Fraction as Fr
 import numpy as np
 import pytest
 
+from macroitems import _maxflow
+
 from macroitems import (canonical_path, layered_grid, random_dag, solution_from_path,
                         solve_capacity)
 
@@ -84,9 +86,16 @@ def test_layered_grid(nx, ny, nz, cone):
     check_capacity_solvers_agree(inst, path)
 
 
+@pytest.mark.skipif(
+    not {"ortools", "igraph"} & set(_maxflow.available_backends()),
+    reason="wide coefficients exceed int32, so they need ortools or igraph")
 def test_wide_profit_and_weight_ranges():
     """Larger coefficients, where the integer scaling v = b p - a w has to stay
-    inside the exact regime of the max-flow backend."""
+    inside the exact regime of the max-flow backend.
+
+    With only the scipy backend, whose arithmetic is int32, these instances
+    cannot be solved at all -- the backend refuses them rather than returning a
+    wrong cut -- so the test is skipped instead of asserting a limitation."""
     for seed in range(10):
         inst = random_dag(60, avg_out_degree=2.0, seed=1000 + seed,
                           p_range=(-5000, 20000), w_range=(1, 9999))

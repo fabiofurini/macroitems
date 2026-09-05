@@ -147,6 +147,14 @@ def canonical_path(inst: Instance, method: str = "bisection", exact: Optional[bo
     the coarsest (maximal-tie) macroitem.
     """
     t0 = time.perf_counter()
+    # Decimal data are scaled to integers first: the closures, the macroitems
+    # and the ratios are all invariant under it, but the parametric values
+    # become integers, so the computation is exact and an integer maximum-flow
+    # backend can carry it.  Only the cumulative profits and weights have to be
+    # scaled back at the end.
+    scale = 1
+    if not inst.is_integral():
+        inst, scale = inst.scaled_to_integers()
     n = inst.n
     n_mf = 0
     if exact is None:
@@ -197,10 +205,9 @@ def canonical_path(inst: Instance, method: str = "bisection", exact: Optional[bo
     else:
         raise ValueError(method)
     ratios = np.array([inst.p[I].sum() / inst.w[I].sum() for I in macro])
-    P = np.concatenate([[0.0], np.cumsum([inst.p[I].sum() for I in macro])])
-    W = np.concatenate([[0.0], np.cumsum([inst.w[I].sum() for I in macro])])
-    path = MacroitemPath(macro, ratios, P, W, n_mf, time.perf_counter() - t0, method)
-    return path
+    P = np.concatenate([[0.0], np.cumsum([inst.p[I].sum() for I in macro])]) / scale
+    W = np.concatenate([[0.0], np.cumsum([inst.w[I].sum() for I in macro])]) / scale
+    return MacroitemPath(macro, ratios, P, W, n_mf, time.perf_counter() - t0, method)
 
 
 # ------------------------------------------------ LP at a given capacity
@@ -210,6 +217,10 @@ def solve_capacity(inst: Instance, c: float, solver: Optional[ClosureSolver] = N
     price: at most O(k) maximum closures, typically a handful.  Returns the
     canonical primal optimum (1 on M_{h-1}, theta on I_h, 0 elsewhere)."""
     t0 = time.perf_counter()
+    scale = 1
+    if solver is None and not inst.is_integral():
+        inst, scale = inst.scaled_to_integers()      # see canonical_path
+        c = c * scale
     n = inst.n
     solver = solver or ClosureSolver(inst, backend=backend)
     n_mf = 0
@@ -221,8 +232,8 @@ def solve_capacity(inst: Instance, c: float, solver: Optional[ClosureSolver] = N
     Mq = res0.mask
     if inst.w[Mq].sum() <= c + 1e-12 * max(1.0, c):
         x = Mq.astype(float)
-        return LPSolution(x, float(inst.p[Mq].sum()), 0.0, Mq, np.zeros(n, bool), ~Mq, 1.0, None,
-                          n_mf, time.perf_counter() - t0, degenerate="slack")
+        return LPSolution(x, float(inst.p[Mq].sum()) / scale, 0.0, Mq, np.zeros(n, bool), ~Mq,
+                          1.0, None, n_mf, time.perf_counter() - t0, degenerate="slack")
     A = np.zeros(n, dtype=bool)
     B = Mq
     lam = 0.0
@@ -249,7 +260,7 @@ def solve_capacity(inst: Instance, c: float, solver: Optional[ClosureSolver] = N
     Hmask = np.zeros(n, dtype=bool)
     Hmask[D] = True
     x[D] = theta
-    value = float(inst.p[A].sum() + theta * pD)
+    value = float(inst.p[A].sum() + theta * pD) / scale
     Z = ~(A | Hmask)
     deg = "cumulative" if abs(theta - 1.0) < 1e-12 else ""
     # The Newton search jumps between brackets instead of enumerating the

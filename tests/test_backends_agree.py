@@ -128,7 +128,11 @@ def test_scipy_rejects_large_capacities():
     assert net.solve(np.array([2 ** 31 - 1, 2 ** 31 - 1]), 0, 2)[0] == 2 ** 31 - 1
     with pytest.raises(ValueError, match="int32"):
         net.solve(np.array([2 ** 31, 2 ** 31]), 0, 2)
-    # and the refusal surfaces on a real instance, instead of a wrong closure
+    # and the refusal surfaces on a real instance, instead of a wrong closure.
+    # Computing the reference path needs a 64-bit backend: with scipy alone the
+    # wide instance cannot be solved at all, which is the limitation itself.
+    if not {"ortools", "igraph"} & set(BACKENDS):
+        pytest.skip("wide coefficients need a 64-bit backend (ortools or igraph)")
     inst = WIDE()
     path = canonical_path(inst)
     lam = Fr(int(inst.p[path.macroitems[0]].sum()), int(inst.w[path.macroitems[0]].sum()))

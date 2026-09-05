@@ -19,6 +19,14 @@ is one minimum cut. Three interchangeable backends, selected with
 | `igraph` | `python-igraph` (GPL-2) | floating point | the fallback for data that cannot be scaled to integers |
 | `scipy` | `scipy` (BSD, a hard dependency) | int32 | always available; **rejects** capacities above `2**31 - 1` rather than truncating them |
 
+With `scipy` alone the library is complete and exact for data whose scaled
+parametric values stay inside int32, which covers the published benchmark and
+most instances one meets. Wide integer coefficients do not fit, and the
+backend refuses them with a clear error instead of returning a wrong cut;
+installing `ortools` (or `igraph`) removes the restriction. The test suite
+skips the wide-coefficient checks when no 64-bit backend is present, and says
+so.
+
 They must agree on integer data, and the test suite checks that they do. The
 `scipy` restriction is not cosmetic: `scipy.sparse.csgraph.maximum_flow`
 silently truncates larger capacities and returns a wrong flow, which on wide
