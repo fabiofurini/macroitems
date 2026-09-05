@@ -98,7 +98,7 @@ class LPSolution:
     H: np.ndarray               # bool mask: fractional region I_h (empty if integral)
     Z: np.ndarray               # bool mask: null region
     theta: float
-    h: int
+    h: Optional[int]            # index of the split macroitem, None when unknown
     n_maxflow: int
     seconds: float
     degenerate: str = ""        # "", "slack", "cumulative"
@@ -129,7 +129,8 @@ def _values_at_ratio(sub: Instance, num: float, den: float, exact: bool):
     return sub.p - lam * sub.w, _tol(num, lam, den)
 
 
-def canonical_path(inst: Instance, method: str = "bisection", exact: Optional[bool] = None) -> MacroitemPath:
+def canonical_path(inst: Instance, method: str = "bisection", exact: Optional[bool] = None,
+                   backend: Optional[str] = None) -> MacroitemPath:
     """Compute the canonical macroitem sequence.
 
     method="bisection": geometric bisection on the breakpoints (Eisner-Severance
@@ -161,7 +162,7 @@ def canonical_path(inst: Instance, method: str = "bisection", exact: Optional[bo
             lam = pD / wD
             sub, nodes = inst.induced(D)
             v, tol = _values_at_ratio(sub, pD, wD, exact)
-            res = ClosureSolver(sub).solve(v, tie="max")
+            res = ClosureSolver(sub, backend=backend).solve(v, tie="max")
             n_mf += 1
             if res.value > tol and 0 < res.closure.size < D.size:
                 C = A.copy()
@@ -177,7 +178,7 @@ def canonical_path(inst: Instance, method: str = "bisection", exact: Optional[bo
         while not A.all():
             D = np.flatnonzero(~A)
             sub, nodes = inst.induced(D)
-            solver = ClosureSolver(sub)
+            solver = ClosureSolver(sub, backend=backend)
             num, den = float(sub.p.sum()), float(sub.w.sum())
             C = np.arange(D.size)
             for _ in range(200):
@@ -203,13 +204,13 @@ def canonical_path(inst: Instance, method: str = "bisection", exact: Optional[bo
 
 # ------------------------------------------------ LP at a given capacity
 def solve_capacity(inst: Instance, c: float, solver: Optional[ClosureSolver] = None,
-                   exact: Optional[bool] = None) -> LPSolution:
+                   exact: Optional[bool] = None, backend: Optional[str] = None) -> LPSolution:
     """Solve the LP relaxation at capacity c by a Newton search on the weight
     price: at most O(k) maximum closures, typically a handful.  Returns the
     canonical primal optimum (1 on M_{h-1}, theta on I_h, 0 elsewhere)."""
     t0 = time.perf_counter()
     n = inst.n
-    solver = solver or ClosureSolver(inst)
+    solver = solver or ClosureSolver(inst, backend=backend)
     n_mf = 0
     if exact is None:
         exact = is_integer_data(inst)
@@ -219,8 +220,8 @@ def solve_capacity(inst: Instance, c: float, solver: Optional[ClosureSolver] = N
     Mq = res0.mask
     if inst.w[Mq].sum() <= c + 1e-12 * max(1.0, c):
         x = Mq.astype(float)
-        return LPSolution(x, float(inst.p[Mq].sum()), 0.0, Mq, np.zeros(n, bool), ~Mq, 1.0, 0, n_mf,
-                          time.perf_counter() - t0, degenerate="slack")
+        return LPSolution(x, float(inst.p[Mq].sum()), 0.0, Mq, np.zeros(n, bool), ~Mq, 1.0, None,
+                          n_mf, time.perf_counter() - t0, degenerate="slack")
     A = np.zeros(n, dtype=bool)
     B = Mq
     lam = 0.0
@@ -230,7 +231,7 @@ def solve_capacity(inst: Instance, c: float, solver: Optional[ClosureSolver] = N
         lam = pD / wD
         sub, nodes = inst.induced(D)
         v, tol = _values_at_ratio(sub, pD, wD, exact)
-        res = ClosureSolver(sub).solve(v, tie="max")
+        res = ClosureSolver(sub, backend=backend).solve(v, tie="max")
         n_mf += 1
         if res.value > tol and 0 < res.closure.size < D.size:
             C = A.copy()
@@ -250,7 +251,11 @@ def solve_capacity(inst: Instance, c: float, solver: Optional[ClosureSolver] = N
     value = float(inst.p[A].sum() + theta * pD)
     Z = ~(A | Hmask)
     deg = "cumulative" if abs(theta - 1.0) < 1e-12 else ""
-    return LPSolution(x, value, lam, A, Hmask, Z, theta, -1, n_mf, time.perf_counter() - t0, degenerate=deg)
+    # The Newton search jumps between brackets instead of enumerating the
+    # macroitems, so the *index* of the split one is not known here -- only the
+    # set H is.  solution_from_path, which has the whole path, reports it.
+    return LPSolution(x, value, lam, A, Hmask, Z, theta, None, n_mf,
+                      time.perf_counter() - t0, degenerate=deg)
 
 
 def solution_from_path(inst: Instance, path: MacroitemPath, c: float) -> LPSolution:

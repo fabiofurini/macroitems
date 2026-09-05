@@ -22,6 +22,8 @@ from typing import Iterable, Optional
 
 import numpy as np
 
+from decimal import Decimal
+
 
 @dataclasses.dataclass
 class Instance:
@@ -57,33 +59,49 @@ class Instance:
         """True if profits and weights are integers (the exact-arithmetic regime)."""
         return bool(np.all(self.p == np.rint(self.p)) and np.all(self.w == np.rint(self.w)))
 
-    def scaled_to_integers(self, max_power: int = 9) -> tuple["Instance", int]:
+    def scaled_to_integers(self, max_power: int = 9,
+                           max_magnitude: float = 2.0 ** 53) -> tuple["Instance", int]:
         """Return an equivalent instance with integer data, and the scale used.
 
         Multiplying every profit and weight by the same positive integer
         rescales the parametric values by that integer and leaves every
         closure, every macroitem and every ratio order unchanged; capacities
         scale with the weights.  The optimal value scales by the same factor,
-        so ``z_original(c) = z_scaled(scale * c) / scale``.
+        so ``z_original(c) = z_scaled(scale * c) / scale``.  Getting there
+        matters: on integer data the whole parametric machinery is exact, with
+        the breakpoints recovered as rationals.
 
-        Instances whose data need more than ``max_power`` decimals are left
-        alone (the caller then works in floating point).  Returns ``(self, 1)``
-        when the data are already integral.
+        The number of decimals is read off the shortest decimal representation
+        of each value and the scaling is then done in decimal arithmetic.
+        Multiplying the floats instead would fail on data that *are* decimal:
+        a block value of ``-2236.7886`` is not exactly representable, and
+        ``value * 10**9`` inherits an error of about 0.016, which no rounding
+        tolerance can distinguish from genuinely finer data.
+
+        Returns ``(self, 1)`` when the data are already integral, when more
+        than ``max_power`` decimals are needed, or when scaling would push a
+        value past ``max_magnitude`` (beyond which the products formed by the
+        parametric search stop being exact in 64-bit arithmetic).
         """
         if self.is_integral():
             return self, 1
-        for d in range(1, max_power + 1):
-            scale = 10 ** d
-            if (np.allclose(self.p * scale, np.rint(self.p * scale), rtol=0, atol=1e-6)
-                    and np.allclose(self.w * scale, np.rint(self.w * scale), rtol=0, atol=1e-6)):
-                meta = dict(self.meta)
-                meta["integer_scale"] = scale
-                if "capacity" in meta:
-                    meta["capacity"] = meta["capacity"] * scale
-                out = Instance(np.rint(self.p * scale), np.rint(self.w * scale), self.arcs.copy(),
-                               name=self.name, meta=meta, extra=dict(self.extra))
-                return out, scale
-        return self, 1
+        decimals = max(_decimals_of(v) for v in (*self.p.tolist(), *self.w.tolist()))
+        if decimals == 0 or decimals > max_power:
+            return self, 1
+        scale = 10 ** decimals
+        largest = max(np.abs(self.p).max(initial=0.0), self.w.max(initial=0.0)) * scale
+        if largest > max_magnitude:
+            return self, 1
+        p_int = _scale_exactly(self.p, decimals)
+        w_int = _scale_exactly(self.w, decimals)
+        meta = dict(self.meta)
+        meta["integer_scale"] = scale
+        for key in ("capacity", "capacity_cpit_period", "capacity_cpit_total"):
+            if key in meta:
+                meta[key] = meta[key] * scale
+        out = Instance(p_int, w_int, self.arcs.copy(), name=self.name, meta=meta,
+                       extra=dict(self.extra))
+        return out, scale
 
     def induced(self, nodes: np.ndarray) -> tuple["Instance", np.ndarray]:
         """Sub-instance induced by `nodes` (sorted array of item indices).
@@ -136,6 +154,27 @@ class Instance:
             for k, (i, j) in enumerate(self.arcs):
                 f.write(f" prec{k}: x{i} - x{j} <= 0\n")
             f.write("Bounds\n" + "".join(f" 0 <= x{i} <= 1\n" for i in range(self.n)) + "End\n")
+
+
+
+def _decimals_of(value: float) -> int:
+    """Number of decimals in the shortest decimal that round-trips to ``value``.
+
+    ``repr`` of a float gives that shortest decimal, so a value read from a
+    file as ``2192.93`` reports 2, whatever its binary expansion looks like.
+    """
+    text = repr(float(value))
+    if "e" in text or "E" in text:
+        return Decimal(text).as_tuple().exponent * -1 if Decimal(text).as_tuple().exponent < 0 else 0
+    _, _, frac = text.partition(".")
+    frac = frac.rstrip("0")
+    return len(frac)
+
+
+def _scale_exactly(values: np.ndarray, decimals: int) -> np.ndarray:
+    """``values * 10**decimals`` as exact integers, via decimal arithmetic."""
+    factor = Decimal(10) ** decimals
+    return np.array([float(Decimal(repr(float(v))) * factor) for v in values.tolist()])
 
 
 def topological_order(n: int, arcs: np.ndarray) -> Optional[np.ndarray]:
