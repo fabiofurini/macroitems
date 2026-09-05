@@ -11,7 +11,10 @@ sources' orientation of the arcs, and use nothing from :mod:`macroitems`:
   * :func:`reduced_sidney_decomposition` -- Sidney's Algorithm 1* (1975, p. 291,
     "the largest possible rho-minimal set"), i.e. the reduced Sidney
     decomposition of Margot, Queyranne and Wang (2003, Theorem 3.9), computed by
-    enumerating every initial set.
+    enumerating every initial set;
+  * :func:`finest_sidney_decomposition` -- Sidney's Algorithm 1 (1975,
+    pp. 285--286), which extracts the rho*-minimal sets instead and gives the
+    finest decomposition (Margot et al., Corollary 3.12).
 
 Everything is exact: profits, weights and ratios are integers or
 :class:`fractions.Fraction`.
@@ -20,7 +23,7 @@ from __future__ import annotations
 
 import random
 from fractions import Fraction as Fr
-from typing import Dict, List, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 Block = Tuple[frozenset, Fr]
 
@@ -87,12 +90,13 @@ def shaw_cho_blocks(parent: Sequence[int], p: Sequence[int],
     the successively deleted subtrees increase.  Here the deletion is carried
     all the way down to the empty tree, so the whole aggregation is returned.
 
-    Ties are resolved as in the paper under study: all the subtrees attaining
-    the minimum ratio are deleted together, so that the deleted block is the
-    largest one of minimum ratio (its ratio is again the minimum, being a
-    weighted average of equal ratios).  Returns ``[(T, p(T)/w(T)), ...]`` in
-    deletion order, so the *last* block deleted is the first of the paper's
-    canonical sequence.
+    Shaw and Cho delete one subtree at a time and do not discuss what to do
+    when several of them attain the minimum ratio; the maximal convention of
+    the paper under test is applied here, so that all the subtrees of minimum
+    ratio are deleted together and the deleted block is the largest one of
+    minimum ratio (its ratio is again the minimum, being a weighted average of
+    equal ratios).  Returns ``[(T, p(T)/w(T)), ...]`` in deletion order, so the
+    *last* block deleted is the first of the paper's canonical sequence.
     """
     n = len(p)
     children = _children(parent)
@@ -129,7 +133,7 @@ def shaw_cho_blocks(parent: Sequence[int], p: Sequence[int],
 
 
 def shaw_cho_bound(parent: Sequence[int], p: Sequence[int], w: Sequence[int], c,
-                   blocks: List[Block] = None) -> Tuple[Fr, frozenset]:
+                   blocks: Optional[List[Block]] = None) -> Tuple[Fr, Optional[frozenset]]:
     """Shaw and Cho (1998), Proposition 2 and Theorem 3: their upper bound and
     their critical item.
 
