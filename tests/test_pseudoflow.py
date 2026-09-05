@@ -11,9 +11,10 @@ Three kinds of test live here:
 * the reduction is sound: whatever the package returns is a nested, complete
   chain of closures, and it is always a *coarsening* of the canonical sequence
   (consecutive macroitems merged), never anything else;
-* it is exactly the canonical sequence on every instance small enough that the
-  bug does not bite (the running example, the degenerate corners, and every
-  random instance with n <= 40 tried here);
+* it is exactly the canonical sequence wherever the bug does not bite: the
+  running example, the degenerate corners, five mining-like block models and 29
+  of the 30 random DAGs tried here (the thirtieth is pinned in
+  ``KNOWN_WRONG_DAGS``);
 * the documented counterexample still fails -- a sentinel: if a future version
   of the package passes it, ``test_counterexample_is_still_broken`` fails and
   tells us to re-examine whether the method can be enabled.
@@ -78,9 +79,9 @@ def is_coarsening(macroitems, reference) -> bool:
     return pos == len(reference)
 
 
-def check_chain_is_sound(inst, closures, lambdas):
-    """The chain reported by the package: nested, complete, closed, and every
-    reported breakpoint is the exact ratio of the increment it introduces."""
+def check_chain_is_sound(inst, closures):
+    """The chain reported by the package is nested, complete and made of
+    closures -- true whether or not breakpoints were missed."""
     prev = np.zeros(inst.n, dtype=bool)
     assert not closures[0].any(), "the first reported cut should be empty"
     assert closures[-1].all(), "the last reported cut should be the whole item set"
@@ -88,8 +89,19 @@ def check_chain_is_sound(inst, closures, lambdas):
         assert not (prev & ~cur).any(), "the chain is not nested"
         assert is_closure(inst, cur), "a reported cut is not a closure"
         if r:
+            assert (cur & ~prev).any(), "a reported interval does not change the cut"
+        prev = cur
+
+
+def check_breakpoints(inst, closures, lambdas):
+    """Where the chain *is* the canonical one, ``lambda = Lambda - t`` must map
+    each reported breakpoint onto the exact ratio of the increment: this is what
+    validates the reduction (the ratios themselves are recomputed, never read
+    off the package's output)."""
+    prev = np.zeros(inst.n, dtype=bool)
+    for r, cur in enumerate(closures):
+        if r:
             inc = np.flatnonzero(cur & ~prev)
-            assert inc.size, "a reported interval does not change the cut"
             lam = float(inst.p[inc].sum() / inst.w[inc].sum())
             assert lam == pytest.approx(lambdas[r], abs=1e-9, rel=1e-12), \
                 "lambda = Lambda - t does not match the ratio of the increment"
@@ -99,12 +111,14 @@ def check_chain_is_sound(inst, closures, lambdas):
 def compare(inst):
     """(pseudoflow path, reference path); checks the soundness of the chain."""
     closures, lambdas, _ = parametric_chain_pseudoflow(inst)
-    check_chain_is_sound(inst, closures, lambdas)
+    check_chain_is_sound(inst, closures)
     got = canonical_path_pseudoflow(inst, allow_incorrect=True)
     ref = canonical_path(inst)
     assert is_coarsening(got.macroitems, ref.macroitems), (
         f"{inst.name}: pseudoflow returned a chain that is not even a coarsening "
         f"of the canonical sequence")
+    if sets_of(got.macroitems) == sets_of(ref.macroitems):
+        check_breakpoints(inst, closures, lambdas)
     return got, ref
 
 
@@ -238,17 +252,24 @@ def test_degenerate_cases(name, p, w, arcs):
 
 @pytest.mark.parametrize("n,d,seed", DAG_CASES, ids=[f"dag{n}d{d}s{s}" for n, d, s in DAG_CASES])
 def test_random_dags(n, d, seed):
+    """Thirty random DAGs: the chain is always a sound coarsening, and it is the
+    canonical sequence except on the pinned case."""
     inst = random_dag(n, d, seed=seed)
     got, ref = compare(inst)
-    assert inst.n <= EXACT_UP_TO
-    assert_equal_paths(got, ref, inst)
+    if (n, d, seed) in KNOWN_WRONG_DAGS:
+        assert sets_of(got.macroitems) != sets_of(ref.macroitems), (
+            f"{inst.name} is pinned as a pseudoflow failure but now agrees with "
+            f"canonical_path: recheck the whole comparison and update "
+            f"KNOWN_WRONG_DAGS (and possibly re-enable the method)")
+    else:
+        assert_equal_paths(got, ref, inst)
 
 
-@pytest.mark.parametrize("nx,ny,nz,cone", [(3, 3, 3, 5), (4, 4, 3, 5), (3, 3, 4, 9)])
+@pytest.mark.parametrize("nx,ny,nz,cone",
+                         [(3, 3, 3, 5), (4, 4, 3, 5), (3, 3, 4, 9), (5, 5, 4, 5), (4, 4, 4, 9)])
 def test_layered_grids(nx, ny, nz, cone):
     inst = layered_grid(nx, ny, nz, cone=cone, seed=0)
     got, ref = compare(inst)
-    assert inst.n <= EXACT_UP_TO
     assert_equal_paths(got, ref, inst)
 
 

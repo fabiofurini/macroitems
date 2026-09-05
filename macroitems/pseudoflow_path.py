@@ -117,12 +117,17 @@ the canonical sequence with strictly decreasing increment ratios -- exactly the
 properties one would check.  Certifying it would cost one maximum closure per
 macroitem, which is what :func:`~macroitems.path.canonical_path` already does.
 
-Measured on the generators of this package (``random_dag`` over 11 sizes x 5
-densities x 2 seeds, plus five ``layered_grid`` block models): the sequence is
-exact for every instance with ``n <= 48``, and then decays -- 9/10 at ``n = 60``,
-7/10 at ``n = 90``, 8/10 at ``n = 130``, 4/10 at ``n = 200``, 2/10 at
-``n = 300``.  It is therefore unusable both as a solver and as a timing
-baseline, and Section A5 of the experimental plan allows dropping the method.
+Measured on ``random_dag`` (5 densities x 2 seeds at each size), the fraction of
+instances whose sequence is exact is 10/10 up to ``n = 20``, 9/10 at ``n = 30``,
+10/10 at ``n = 40``, 9/10 at ``n = 60``, 7/10 at ``n = 90``, 8/10 at
+``n = 130``, 4/10 at ``n = 200`` and 2/10 at ``n = 300``.  There is no size
+below which it is safe: with eight seeds per density the smallest failing
+``random_dag`` has ``n = 13``, and the handmade counterexample above has
+``n = 3``.  (The mining-like ``layered_grid`` block models happen to come out
+exact on all seven configurations tried, up to ``n = 256``; that is a property
+of their degeneracy pattern, not a guarantee.)  The method is therefore unusable
+both as a solver and as a timing baseline, and Section A5 of the experimental
+plan explicitly allows dropping it.
 """
 from __future__ import annotations
 
@@ -157,9 +162,10 @@ PSEUDOFLOW_MISSING_BREAKPOINTS = (
     "{0} | {1} | {2} with ratios 3 > 2 > 1, but the package reports two intervals "
     "only, with source sets {0} and {0,1,2}. The reported set {0} is not a minimum "
     "cut on its interval (at lambda = 3.5 it costs 6.5 against 6 for the empty set), "
-    "so this is a wrong answer, not a coarser one. On the generators of this package "
-    "the sequence is exact up to n = 48 and then decays (4/10 at n = 200, 2/10 at "
-    "n = 300). The returned chain is always nested, complete, closed and a coarsening "
+    "so this is a wrong answer, not a coarser one. On random_dag instances the "
+    "sequence is exact for 10/10 up to n = 20 and then decays (4/10 at n = 200, 2/10 "
+    "at n = 300), and there is no safe size: the smallest failing random_dag has "
+    "n = 13. The returned chain is always nested, complete, closed and a coarsening "
     "of the canonical sequence, so the error cannot be detected without recomputing "
     "the maximum closures, which is what canonical_path already does."
 )
