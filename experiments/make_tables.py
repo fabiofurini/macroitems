@@ -32,12 +32,10 @@ import os
 from collections import defaultdict
 
 
-def _load_all(directory, pattern, skip=()):
+def _load_all(directory, pattern):
     """Concatenate every CSV matching ``pattern``, in a stable order."""
     rows = []
     for path in sorted(glob.glob(os.path.join(directory, pattern))):
-        if os.path.basename(path) in skip:
-            continue
         rows += read_csv(path)
     return rows
 
@@ -212,10 +210,9 @@ def main(argv=None):
     os.makedirs(args.out, exist_ok=True)
     # Every characteristics_*.csv and compare_*.csv in the results directory is
     # picked up, so a campaign split across several files -- by collection, or
-    # because a long run was resumed -- needs no change here.  compare_demo.csv
-    # is the small illustration of the docs and is skipped.
+    # because a long run was resumed -- needs no change here.
     structure = _load_all(args.results, "characteristics_*.csv")
-    compare = _load_all(args.results, "compare_*.csv", skip=("compare_demo.csv",))
+    compare = _load_all(args.results, "compare_*.csv")
 
     made = []
     for name, (header, rows), caption, label in [
