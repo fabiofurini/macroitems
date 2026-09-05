@@ -33,6 +33,24 @@ jobs:
           macroitems path running-example --check
           macroitems solve running-example --capacity 4 --dual --faces
 
+  core-only:
+    # The package declares numpy and scipy as its only hard dependencies.
+    # This job checks that claim: importing it, or computing a dual
+    # certificate, must not need an optional backend.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          python -m pip install --upgrade pip
+          pip install .
+      - run: |
+          macroitems solve running-example --capacity 4 --dual --faces
+          macroitems path running-example --check
+          python -c "import macroitems; print(macroitems.__version__)"
+
   slow:
     runs-on: ubuntu-latest
     steps:

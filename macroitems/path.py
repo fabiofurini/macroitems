@@ -11,12 +11,13 @@ from __future__ import annotations
 import dataclasses
 import time
 from fractions import Fraction
+from math import gcd
 from typing import List, Optional
 
 import numpy as np
-import igraph as ig
 
 from .instance import Instance
+from ._maxflow import MaxFlowNetwork
 from .closure import ClosureSolver, ClosureResult
 
 
@@ -299,35 +300,59 @@ class DualCertificate:
     n_maxflow: int
 
 
-def _region_flow(inst: Instance, region: np.ndarray, b: np.ndarray, kind: str):
-    """Flow on the arcs inside `region` (bool mask) with divergence div_i = out - in
-    along arcs (i, j).  kind: "eq" (div = b), "le" (div <= b), "ge" (div >= b).
-    Sources are nodes with b_i > 0 (supply b_i), sinks nodes with b_i < 0."""
+def _region_flow(inst: Instance, region: np.ndarray, b: np.ndarray, kind: str,
+                 backend: Optional[str] = None):
+    """Flow on the arcs inside ``region`` with divergence ``div_i = out - in``.
+
+    ``kind`` is ``"eq"`` (div = b), ``"le"`` (div <= b) or ``"ge"`` (div >= b).
+    Nodes with ``b_i > 0`` are sources of supply ``b_i`` and nodes with
+    ``b_i < 0`` are sinks; the flow is a maximum flow between them, and
+    saturating the right side of the network is what certifies the region.
+    """
     nodes = np.flatnonzero(region)
     if nodes.size == 0:
         return np.zeros(0), np.zeros(0, dtype=np.int64), True
     sub, _ = inst.induced(nodes)
-    arc_idx = np.flatnonzero(region[inst.arcs[:, 0]] & region[inst.arcs[:, 1]]) if inst.m else np.zeros(0, np.int64)
+    arc_idx = (np.flatnonzero(region[inst.arcs[:, 0]] & region[inst.arcs[:, 1]])
+               if inst.m else np.zeros(0, np.int64))
     bs = b[nodes]
     k = nodes.size
     s, t = k, k + 1
     big = 4.0 * float(np.abs(bs).sum()) + 1.0
     e_src = np.concatenate([sub.arcs[:, 0], np.full(k, s), np.arange(k)])
     e_dst = np.concatenate([sub.arcs[:, 1], np.arange(k), np.full(k, t)])
-    caps = np.concatenate([np.full(sub.m, big), np.where(bs > 0, bs, 0.0), np.where(bs < 0, -bs, 0.0)])
-    g = ig.Graph(n=k + 2, edges=list(zip(e_src.tolist(), e_dst.tolist())), directed=True)
-    fl = g.maxflow(s, t, capacity=caps.tolist())
-    flow = np.asarray(fl.flow)
-    alpha_sub = flow[:sub.m]
+    caps = np.concatenate([np.full(sub.m, big),
+                           np.where(bs > 0, bs, 0.0), np.where(bs < 0, -bs, 0.0)])
+    net = MaxFlowNetwork(k + 2, e_src.astype(np.int64), e_dst.astype(np.int64),
+                         backend=_flow_backend(caps, backend))
+    flow_value, flow = net.solve(caps, s, t)
+    alpha_sub = np.asarray(flow, dtype=float)[:sub.m]
     tot_pos, tot_neg = float(bs[bs > 0].sum()), float(-bs[bs < 0].sum())
     tol = 1e-7 * max(1.0, tot_pos + tot_neg)
     if kind == "eq":
-        ok = abs(fl.value - tot_pos) <= tol and abs(fl.value - tot_neg) <= tol
+        ok = abs(flow_value - tot_pos) <= tol and abs(flow_value - tot_neg) <= tol
     elif kind == "le":
-        ok = abs(fl.value - tot_neg) <= tol          # sinks saturated
+        ok = abs(flow_value - tot_neg) <= tol          # sinks saturated
     else:
-        ok = abs(fl.value - tot_pos) <= tol          # sources saturated
+        ok = abs(flow_value - tot_pos) <= tol          # sources saturated
     return alpha_sub, arc_idx, ok
+
+
+def _flow_backend(caps: np.ndarray, requested: Optional[str]) -> Optional[str]:
+    """A backend that can carry ``caps``.
+
+    The divergences b are integral only when lambda_h happens to be, so this
+    network is usually a floating-point one even on integer data; the exact
+    backends would refuse it.  Fall back to a floating-point one when needed
+    rather than failing.
+    """
+    if requested is not None:
+        return requested
+    integral = np.all(caps == np.rint(caps))
+    if integral:
+        return None                                    # the default is fine
+    from ._maxflow import available_backends
+    return "igraph" if "igraph" in available_backends() else None
 
 
 def canonical_dual(inst: Instance, sol: LPSolution, c: float) -> DualCertificate:
@@ -337,13 +362,28 @@ def canonical_dual(inst: Instance, sol: LPSolution, c: float) -> DualCertificate
     n, m = inst.n, inst.m
     lam = sol.lam
     b = inst.p - lam * inst.w
+
+    # On integer data the multiplier is a rational num/den, and then
+    # den * b_i = den * p_i - num * w_i is an integer.  Solving the region
+    # networks on those scaled capacities keeps the certificate exact and lets
+    # the integer maximum-flow backends carry it; the flow scales linearly, so
+    # dividing back by den recovers alpha.  Without that, b is a float vector
+    # that only a floating-point backend can take.
+    den = 1.0
+    if is_integer_data(inst) and sol.H.any():
+        num_i, den_i = float(inst.p[sol.H].sum()), float(inst.w[sol.H].sum())
+        if den_i != 0 and abs(num_i / den_i - lam) <= 1e-9 * max(1.0, abs(lam)):
+            g = gcd(int(round(abs(num_i))), int(round(abs(den_i)))) or 1
+            den = abs(den_i) / g
+    b_work = np.rint(b * den) if den != 1.0 else b
+
     alpha = np.zeros(m)
     ok_all = True
     n_mf = 0
     for region, kind in ((sol.F, "le"), (sol.H, "eq"), (sol.Z, "ge")):
         if region.any():
-            a_sub, idx, ok = _region_flow(inst, region, b, kind)
-            alpha[idx] = a_sub
+            a_sub, idx, ok = _region_flow(inst, region, b_work, kind)
+            alpha[idx] = a_sub / den
             ok_all &= ok
             n_mf += 1
     div = np.zeros(n)
