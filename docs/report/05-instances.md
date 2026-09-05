@@ -15,7 +15,8 @@ an afternoon if nobody writes it down.
 
 Espinoza, Goycoolea, Moreno and Newman, *MineLib: a library of open pit mining
 problems*, Annals of Operations Research 206 (2013) 93–114.
-Download: <https://mansci-web.uai.cl/minelib/>
+Download: <https://mansci-web.uai.cl/minelib/>, or take the copy attached to
+this repository's [latest release](../../../releases/latest).
 
 An instance is a set of files sharing a stem: `.blocks` (block model),
 `.prec` (precedences), `.upit` (ultimate-pit objective), `.cpit` (the

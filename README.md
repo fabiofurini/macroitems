@@ -167,12 +167,15 @@ gh release download --pattern instances.zip && unzip instances.zip -d instances_
 > <https://mansci-web.uai.cl/minelib/>
 
 > **The precedence-constrained knapsack benchmark** — 23 single-capacity
-> instances, telecom (A–K) and mining (L–W).
-> K. Park, S. Park, *Lifting cover inequalities for the precedence-constrained
-> knapsack problem*, Discrete Applied Mathematics **72**:219–241, 1997;
+> instances, telecom (A–K) and mining (L–W). Distributed with
 > N. Boland, A. Bley, C. Fricke, G. Froyland, R. Sotirov, *Clique-based facets
 > for the precedence constrained knapsack problem*, Mathematical Programming
-> **132**:69–90, 2012. Distributed by its authors alongside those papers.
+> **133**:481–511, 2012, and with
+> D. Espinoza, M. Goycoolea, E. Moreno, *The precedence constrained knapsack
+> problem: separating maximally violated inequalities*, Discrete Applied
+> Mathematics **194**:65–80, 2015. The files carry no statement of provenance,
+> so these are the papers the collection comes with rather than a claim about
+> which introduced each family.
 
 The readers take those files as published:
 
