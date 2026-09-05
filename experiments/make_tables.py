@@ -27,8 +27,19 @@ from __future__ import annotations
 
 import argparse
 import csv
+import glob
 import os
 from collections import defaultdict
+
+
+def _load_all(directory, pattern, skip=()):
+    """Concatenate every CSV matching ``pattern``, in a stable order."""
+    rows = []
+    for path in sorted(glob.glob(os.path.join(directory, pattern))):
+        if os.path.basename(path) in skip:
+            continue
+        rows += read_csv(path)
+    return rows
 
 
 def read_csv(path):
@@ -199,10 +210,12 @@ def main(argv=None):
     args = ap.parse_args(argv)
 
     os.makedirs(args.out, exist_ok=True)
-    structure = read_csv(os.path.join(args.results, "characteristics_pckp.csv")) + \
-        read_csv(os.path.join(args.results, "characteristics_minelib.csv"))
-    compare = read_csv(os.path.join(args.results, "compare_pckp_benchmark.csv")) + \
-        read_csv(os.path.join(args.results, "compare_minelib.csv"))
+    # Every characteristics_*.csv and compare_*.csv in the results directory is
+    # picked up, so a campaign split across several files -- by collection, or
+    # because a long run was resumed -- needs no change here.  compare_demo.csv
+    # is the small illustration of the docs and is skipped.
+    structure = _load_all(args.results, "characteristics_*.csv")
+    compare = _load_all(args.results, "compare_*.csv", skip=("compare_demo.csv",))
 
     made = []
     for name, (header, rows), caption, label in [

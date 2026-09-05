@@ -364,13 +364,54 @@ instances with $9\,235$ items on which the methods tie, while an instance with
 $3\,243$ items but $22\,306$ arcs already gives a factor of 8. What separates
 them is the precedence structure a simplex basis has to carry.
 
-On the open-pit instances the effect is larger. On \code{zuck\_small}
-($9\,400$ blocks, $145\,640$ precedences) the path returns the entire value
-function in $0.58$~s against $26.3$~s for the fastest solver over twenty
-capacities; on \code{zuck\_medium} ($29\,277$ blocks, $1\,271\,207$
-precedences) in $3.45$~s against $1\,355$~s for HiGHS dual simplex, a factor
-of 390 --- and under a 420~s per-method budget HiGHS does not finish that
-instance at all.
+\subsection{The open-pit instances}
+
+On MineLib the same effect is much larger. Table~\ref{tab:minelib} gives the
+whole comparison, at ten capacities and a budget of 150 seconds per method.
+
+\begin{table}[htbp]
+\centering
+\caption{MineLib: total time for ten capacities. \emph{best solver} is the
+fastest of the three dual simplex codes; \textsc{to} means that none of them
+finished a single capacity within 150~s.}
+\label{tab:minelib}
+\begin{tabular}{lrrrrrr}
+\toprule
+Instance & $n$ & $m$ & path (s) & Newton (s) & best solver (s) & ratio\\
+\midrule
+newman1           & $1\,060$   & $3\,922$     & 0.04  & 0.15  & 0.1   & $1.4\times$\\
+zuck\_small       & $9\,400$   & $145\,640$   & 0.45  & 2.17  & 19.6  & $43.8\times$\\
+kd                & $14\,153$  & $219\,778$   & 1.16  & 2.19  & 42.0  & $36.1\times$\\
+zuck\_medium      & $29\,277$  & $1\,271\,207$& 3.16  & 18.88 & 299.5 & $\mathbf{94.9\times}$\\
+p4hd              & $40\,947$  & $738\,609$   & 11.36 & 7.01  & \textsc{to} & ---\\
+marvin            & $53\,271$  & $650\,631$   & 3.34  & 5.24  & 25.7  & $7.7\times$\\
+w23               & $74\,260$  & $764\,786$   & 12.41 & 14.88 & \textsc{to} & ---\\
+zuck\_large       & $96\,821$  & $1\,053\,105$& 25.00 & 30.91 & \textsc{to} & ---\\
+sm2               & $99\,014$  & $96\,642$    & 2.38  & 1.45  & 1.2   & $0.5\times$\\
+mclaughlin\_limit & $112\,687$ & $3\,035\,483$& 46.50 & 39.91 & \textsc{to} & ---\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Three readings.
+
+\emph{Where the solvers finish, the margin is an order of magnitude or more}:
+a median of $21.9\times$ and a maximum of $94.9\times$, on \code{zuck\_medium},
+where the path returns the whole value function in $3.2$ seconds against
+$299$ seconds for a warm-started dual simplex.
+
+\emph{On four of the ten instances no simplex code finished a single
+capacity} within 150 seconds, while the path computed \emph{every} capacity
+in 11 to 47 seconds. On \code{mclaughlin\_limit} --- $112\,687$ blocks and
+$3\,035\,483$ precedences --- that is $46.5$ seconds for the entire value
+function against no answer at all.
+
+\emph{The one instance the solvers win is the sparsest}, and that is the
+point. \code{sm2} has $99\,014$ items but only $96\,642$ arcs, a density
+below 1, and there a dual simplex is twice as fast as the path. It is the
+largest instance in the collection by item count and the only one on which
+the combinatorial method loses --- which is the density thesis of
+Section~\ref{sec:methods} stated by a single instance.
 
 \subsection{One capacity}
 

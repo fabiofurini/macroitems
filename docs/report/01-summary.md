@@ -24,7 +24,7 @@ It turns on one thing visible before any computation, and one that is not.
 |---|---|---|
 | one capacity | Newton search on the weight price | median 1.5x the fastest LP solver (range 0.4–27x) |
 | the whole value function, sparse graphs (m < 10⁴) | either | median **1.00x** — a tie |
-| the whole value function, dense graphs (m ≥ 2·10⁴) | the canonical path | median **11.2x**, up to **29x** |
+| the whole value function, dense graphs (m ≥ 2·10⁴) | the canonical path | median **11.2x** on the benchmark, **21.9x** on MineLib, up to **94.9x** |
 | an LP solver is unavoidable | dual simplex, never barrier | interior point cannot warm start: every capacity costs a full solve |
 | the value must be right | the combinatorial method | it is exact on integer data — see below |
 
@@ -40,6 +40,9 @@ warm-started dual simplex matches the combinatorial method; on dense ones the
 path wins by an order of magnitude, and the margin grows with size. Item count
 alone predicts nothing — the sparse group contains instances with 9 235 items
 on which the methods tie.
+
+On four of the ten open-pit instances no LP solver finished a single capacity
+within 150 seconds, while the path returned every capacity in 11 to 47.
 
 **3. Accuracy is part of the answer.** On MineLib `kd`, at one capacity out of
 twenty, all five LP solver configurations return a value wrong by

@@ -54,12 +54,40 @@ essentially tie, while P with 3 243 items but 22 306 arcs gives an 8x margin.
 What a simplex basis has to carry, and what a maximum-flow computation handles
 comfortably, is the precedence structure.
 
-On the open-pit instances the effect is stronger. On zuck_small (9 400 blocks,
-145 640 precedences) the path returns the entire value function in 0.58 s
-against 26.3 s for the fastest solver over twenty capacities; on zuck_medium
-(29 277 blocks, 1 271 207 precedences) in 3.45 s against 1 355 s for HiGHS dual
-simplex — a factor of 390 — and at a 420 s per-method budget HiGHS does not
-finish that instance at all.
+## The open-pit instances
+
+On MineLib the same effect is far larger. Ten capacities, 150 s per method;
+**TO** means no dual simplex code finished a single capacity in that budget.
+
+| instance | n | m | path | Newton | best solver | ratio |
+|---|---|---|---|---|---|---|
+| newman1 | 1 060 | 3 922 | 0.04 s | 0.15 s | 0.1 s | 1.4x |
+| zuck_small | 9 400 | 145 640 | 0.45 s | 2.17 s | 19.6 s | 43.8x |
+| kd | 14 153 | 219 778 | 1.16 s | 2.19 s | 42.0 s | 36.1x |
+| zuck_medium | 29 277 | 1 271 207 | 3.16 s | 18.88 s | 299.5 s | **94.9x** |
+| p4hd | 40 947 | 738 609 | 11.36 s | 7.01 s | TO | — |
+| marvin | 53 271 | 650 631 | 3.34 s | 5.24 s | 25.7 s | 7.7x |
+| w23 | 74 260 | 764 786 | 12.41 s | 14.88 s | TO | — |
+| zuck_large | 96 821 | 1 053 105 | 25.00 s | 30.91 s | TO | — |
+| sm2 | 99 014 | 96 642 | 2.38 s | 1.45 s | 1.2 s | 0.5x |
+| mclaughlin_limit | 112 687 | 3 035 483 | 46.50 s | 39.91 s | TO | — |
+
+Three readings.
+
+**Where the solvers finish, the margin is an order of magnitude or more** —
+median 21.9x, maximum 94.9x on zuck_medium, where the path returns the whole
+value function in 3.2 s against 299 s for a warm-started dual simplex.
+
+**On four of the ten instances no simplex code finished a single capacity**
+in 150 s, while the path computed *every* capacity in 11 to 47 s. On
+mclaughlin_limit — 112 687 blocks and 3 035 483 precedences — that is 46.5 s
+for the entire value function against no answer at all.
+
+**The one instance the solvers win is the sparsest**, and that is the point.
+sm2 has 99 014 items but only 96 642 arcs, a density below 1, and there a dual
+simplex is twice as fast. It is the largest instance in the collection by item
+count and the only one the combinatorial method loses — the density thesis
+stated by a single instance.
 
 ## One capacity
 
