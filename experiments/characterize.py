@@ -36,7 +36,8 @@ from macroitems import canonical_path, solution_from_path  # noqa: E402
 from macroitems.formats import read_any, read_minelib_upit  # noqa: E402
 
 
-def characterize(inst, capacity=None, best_known=None, method="bisection"):
+def characterize(inst, capacity=None, best_known=None, method="bisection",
+                 with_dual=True, max_reduced_costs=2000, max_faces=5000):
     """One row of structural statistics for one instance."""
     work, scale = inst.scaled_to_integers()
     t0 = time.perf_counter()
@@ -92,6 +93,44 @@ def characterize(inst, capacity=None, best_known=None, method="bisection"):
         if best_known is not None and z:
             row["z_ip_best_known"] = best_known
             row["true_gap_rel"] = round((z - best_known) / z, 6)
+
+        # What the dual side costs, and what it buys (experiment E3 of the plan).
+        if with_dual and H:
+            from macroitems.dual import best_reduced_costs, canonical_reduced_costs
+            from macroitems.faces import face_dimensions
+            from macroitems.path import canonical_dual
+            from macroitems.stats import heuristic_integer
+
+            t0 = time.perf_counter()
+            dual = canonical_dual(work, sol, c_work)
+            row["seconds_dual"] = round(time.perf_counter() - t0, 4)
+            row["dual_feasible"] = bool(dual.feasible)
+
+            rc = best_reduced_costs(work, sol, max_items=max_reduced_costs)
+            finite = rc.value[np.isfinite(rc.value)]
+            row["seconds_reduced_costs"] = round(rc.seconds, 4)
+            row["n_reduced_costs"] = int(finite.size)
+            if h is not None and finite.size:
+                canon = canonical_reduced_costs(work, path, h)
+                paired = np.isfinite(rc.value) & (rc.region != "H")
+                if paired.any():
+                    gain = (rc.value[paired] - canon[paired]) / np.maximum(1.0, canon[paired])
+                    row["reduced_cost_gain_median"] = round(float(np.median(gain)), 4)
+
+            # k0 and dim D* need |H| minimum cuts, so they are skipped when the
+            # split macroitem is large -- which Corollary 5.1 says is the rare case.
+            if H <= max_faces:
+                t0 = time.perf_counter()
+                info = face_dimensions(work, sol, max_H=max_faces)
+                row["seconds_faces"] = round(time.perf_counter() - t0, 4)
+                row["k0"] = info.k0
+                row["dim_primal"] = info.dim_primal
+                row["dim_dual"] = info.dim_dual
+
+            z_heur = heuristic_integer(work, path, c_work) / scale
+            if z:
+                row["z_heuristic"] = z_heur
+                row["heuristic_gap_rel"] = round((z - z_heur) / z, 6)
     return row
 
 
@@ -101,6 +140,10 @@ def main(argv=None):
     ap.add_argument("paths", nargs="+", help="instance files or directories")
     ap.add_argument("--out", default=None, help="CSV output file")
     ap.add_argument("--method", default="bisection", choices=["bisection", "dinkelbach"])
+    ap.add_argument("--no-dual", action="store_true",
+                    help="skip the dual certificate, reduced costs and face dimensions")
+    ap.add_argument("--max-faces", type=int, default=5000,
+                    help="skip the face dimensions when |H| exceeds this")
     ap.add_argument("--manifest", default=None,
                     help="CSV with columns name,capacity,best_known_primal to take capacities from")
     args = ap.parse_args(argv)
@@ -130,7 +173,8 @@ def main(argv=None):
         if info.get("capacity"):
             cap = float(info["capacity"])
         best = float(info["best_known_primal"]) if info.get("best_known_primal") else None
-        row = characterize(inst, capacity=cap, best_known=best, method=args.method)
+        row = characterize(inst, capacity=cap, best_known=best, method=args.method,
+                           with_dual=not args.no_dual, max_faces=args.max_faces)
         row["family"] = info.get("family", inst.meta.get("family", ""))
         rows.append(row)
         print(f"{row['name']:20s} n={row['n']:6d} k={row['k']:5d} q={row['q']:5d} "

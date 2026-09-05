@@ -40,12 +40,21 @@ bounds that are invalid but entirely plausible — see
 [Defects found](13-defects-found.md), item 1.
 
 **How much it buys.** The face-wide values are never smaller than the
-canonical ones. On the paper's running example they are exactly twice as
-large on every item outside the split macroitem, and the gain grows with the
-density of the precedence graph, which is what one would expect: the denser the
-graph, the more a forced item drags in with it. Since a reduced cost fixes a
-variable when it exceeds the gap between the relaxation and an incumbent, a
-larger reduced cost fixes strictly more.
+canonical ones, and on real instances they are larger by a wide margin.
+
+| | |
+|---|---|
+| median gain, across the 23 benchmark instances | **×44.5** |
+| per-instance median gain, range | ×27.9 (V_10001_63944) to ×160.6 (U_6494_48626) |
+| cost of the canonical dual certificate | 1–37 ms |
+| cost of the face-wide reduced costs | 0.8–19 s (one minimum cut per item) |
+
+Since a reduced cost fixes a variable only when it exceeds the gap between the
+relaxation and an incumbent, a factor of forty is the difference between a
+bound that fixes nothing and one that fixes much of the instance. The costs
+are not comparable either: the canonical values follow from the canonical
+sequence for nothing, the face-wide ones need a minimum cut per item. They are
+what one computes at a node worth the effort, not at every node.
 
 **Validation.** For each item the relaxation was re-solved with that item
 forced to its opposite bound; the reduced cost must not exceed the resulting
@@ -60,7 +69,13 @@ computation is `|H|` minimum cuts on the subgraph induced by `H`, which is
 affordable exactly when the split macroitem is small — the common case.
 
 On the running example: `dim X* = 0` (the primal optimum is unique) and
-`dim D* = 3`, matching the companion note. Intermediate optimal closures trade
-primal degrees of freedom for dual ones, so an instance with a unique primal
-optimum has the widest choice of certificates — which is where the face-wide
-reduced costs are worth computing.
+`dim D* = 3`, matching the companion note.
+
+On the benchmark the primal optimum is unique on **all 23 instances** —
+`k₀ = 1` and `dim X* = 0` throughout. Intermediate optimal closures, the only
+thing that can make the primal face positive-dimensional, do not occur there
+at all. The dual faces are correspondingly large: `dim D*` runs from 1 482 to
+75 812. Since intermediate optimal closures trade primal degrees of freedom
+for dual ones, these are exactly the instances where the face-wide reduced
+costs have the most room to improve on the canonical ones — which is what the
+factor of forty above reflects.

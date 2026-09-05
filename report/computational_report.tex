@@ -496,13 +496,29 @@ objectives, and confusing them yields bounds that are invalid but entirely
 plausible (Section~\ref{sec:defects}).
 
 The face-wide values are never smaller than the closed-form canonical ones
-$w_i|\lambda_r-\lambda_h|$, and on the running example they are exactly twice
-as large on every item outside the split macroitem; the gain grows with the
-density of the precedence graph. Since a reduced cost fixes a variable when it
-exceeds the gap to an incumbent, a larger reduced cost fixes strictly more.
+$w_i|\lambda_r-\lambda_h|$, and on real instances they are larger by a wide
+margin: across the 23 benchmark instances the median item gains a factor of
+$44.5$, with the per-instance median between $27.9$ and $160.6$. Since a
+reduced cost fixes a variable only when it exceeds the gap to an incumbent,
+that is the difference between a bound that fixes nothing and one that fixes
+much of the instance.
+
+The two are not comparable in cost. The canonical values follow from the
+canonical sequence for nothing; the face-wide ones need one minimum cut per
+item, $0.8$ to $19$ seconds on those instances, against $1$ to $37$
+milliseconds for the canonical dual certificate itself. They are what one
+computes at a node worth the effort, not at every node.
+
 Both quantities were validated against the exact loss obtained by re-solving
 the relaxation with each item forced to its opposite bound; over twelve
 instances, no violation.
+
+A third measurement is worth recording because it decides how much room the
+face-wide values have. On \emph{all} 23 benchmark instances the primal optimum
+is unique --- $k_0=1$ and $\dim\mathcal X^\star=0$ --- so the intermediate
+optimal closures that would make the primal face positive-dimensional do not
+occur there at all, and the dual faces are correspondingly large, with
+$\dim\mathcal D^\star$ from $1\,482$ to $75\,812$.
 
 %======================================================================
 \section{Parametric implementations}

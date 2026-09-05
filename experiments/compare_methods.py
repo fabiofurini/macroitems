@@ -45,7 +45,7 @@ sys.path.insert(0, ROOT)
 
 # The methods of the comparison.  "path" and "newton" are ours; the rest are
 # general-purpose LP solvers reached through macroitems.lp.
-COMBINATORIAL = ("path", "newton")
+COMBINATORIAL = ("path", "path-dinkelbach", "newton", "lawler")
 DEFAULT_SOLVERS = ("highs:dual-simplex", "highs:ipm", "gurobi:dual-simplex",
                    "gurobi:barrier", "cplex-cli:dual-simplex")
 
@@ -68,10 +68,12 @@ def run_method(spec: str, path_instance: str, capacities: list) -> dict:
     inst, scale = inst.scaled_to_integers()
     caps = [c * scale for c in capacities]
 
-    if spec == "path":
+    if spec in ("path", "path-dinkelbach", "path-igraph"):
         from macroitems import canonical_path, solution_from_path
+        method = "dinkelbach" if spec == "path-dinkelbach" else "bisection"
+        backend = "igraph" if spec == "path-igraph" else None
         t0 = time.perf_counter()
-        p = canonical_path(inst)
+        p = canonical_path(inst, method=method, backend=backend)
         t_first = time.perf_counter() - t0
         t1 = time.perf_counter()
         values = [solution_from_path(inst, p, c).value / scale for c in caps]
@@ -79,6 +81,16 @@ def run_method(spec: str, path_instance: str, capacities: list) -> dict:
         return {"method": spec, "seconds_first": t_first, "seconds_per_extra": t_rest,
                 "seconds_total": t_first + t_rest * len(caps), "values": values,
                 "n_maxflow": p.n_maxflow, "k": p.k, "q": p.q}
+
+    if spec == "lawler":
+        # Lawler answers a different question -- the first macroitem only --
+        # so it is timed for that, and its "values" are not comparable.
+        from macroitems.lawler import first_macroitem_lawler
+        res = first_macroitem_lawler(inst)
+        return {"method": spec, "seconds_first": res.seconds,
+                "seconds_per_extra": float("nan"), "seconds_total": res.seconds,
+                "n_maxflow": res.n_maxflow, "lawler_iterations": res.iterations,
+                "lawler_macroitem_size": int(res.macroitem.size)}
 
     if spec == "newton":
         from macroitems import solve_capacity
