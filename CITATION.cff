@@ -1,12 +1,32 @@
 cff-version: 1.2.0
 title: "macroitems: the LP relaxation of the precedence-constrained knapsack problem through parametric maximum closure"
-message: "If you use this software, please cite the companion papers (to appear)."
+abstract: >-
+  Computes the canonical macroitem sequence of a precedence-constrained
+  knapsack instance -- the increments of the nested path of maximal optimal
+  closures, with strictly decreasing profit-to-weight ratios -- and with it
+  the whole value function of the LP relaxation, the solution at any capacity,
+  the canonical dual certificate, reduced costs over the dual optimal face,
+  and the dimensions of the optimal faces.
+message: "If you use this software, please cite it and the companion papers."
+type: software
 authors:
   - family-names: Dose
     given-names: Valerio
+    affiliation: "Sapienza Università di Roma"
   - family-names: Furini
     given-names: Fabio
+    affiliation: "Sapienza Università di Roma"
+    email: fabio.furini@uniroma1.it
   - family-names: Locatelli
     given-names: Marco
-version: 0.1.0-pilot
-date-released: 2026-09-04
+    affiliation: "Università di Parma"
+license: MIT
+version: 0.2.0
+date-released: 2026-09-05
+keywords:
+  - precedence-constrained knapsack problem
+  - maximum closure
+  - parametric minimum cut
+  - open-pit mining
+  - Sidney decomposition
+  - linear programming relaxation
