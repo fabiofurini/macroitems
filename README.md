@@ -147,17 +147,45 @@ decomposition of Margot, Queyranne and Wang computed by brute force.
 
 ## Instances
 
-No third-party instance data is redistributed here. `macroitems.formats` reads
-the published files directly:
+The study uses two public collections, **neither of which is ours**. They are
+attached to the [latest release](../../releases/latest) as
+`instances.zip` (32 MB), unmodified, so that the computational study can be
+reproduced exactly — and they are kept out of the repository tree itself, so a
+clone stays small.
 
-* **MineLib** (Espinoza, Goycoolea, Moreno, Newman, *Ann. Oper. Res.* 206,
-  2013) — `read_minelib_upit`, which also works out which quantity is the
-  tonnage and says how it decided;
-* the **PCKP benchmark** (Park and Park 1997; Boland, Bley, Fricke, Froyland,
-  Sotirov, *Math. Programming* 132, 2012) — `read_pckp_dat` and `read_pckp_lp`.
+```bash
+# from the repository root
+gh release download --pattern instances.zip && unzip instances.zip -d instances_raw
+```
 
-See [Instances](docs/report/05-instances.md) for where to get them and what to
-watch out for in the files.
+**Please cite the original authors, not us:**
+
+> **MineLib** — 10 open-pit instances, from 1 060 to 112 687 blocks.
+> D. Espinoza, M. Goycoolea, E. Moreno, A. Newman,
+> *MineLib: a library of open pit mining problems*,
+> Annals of Operations Research **206**(1):93–114, 2013.
+> <https://mansci-web.uai.cl/minelib/>
+
+> **The precedence-constrained knapsack benchmark** — 23 single-capacity
+> instances, telecom (A–K) and mining (L–W).
+> K. Park, S. Park, *Lifting cover inequalities for the precedence-constrained
+> knapsack problem*, Discrete Applied Mathematics **72**:219–241, 1997;
+> N. Boland, A. Bley, C. Fricke, G. Froyland, R. Sotirov, *Clique-based facets
+> for the precedence constrained knapsack problem*, Mathematical Programming
+> **132**:69–90, 2012. Distributed by its authors alongside those papers.
+
+The readers take those files as published:
+
+```python
+from macroitems.formats import read_minelib_upit, read_pckp_dat
+inst = read_minelib_upit("instances_raw/minelib/newman1")
+inst = read_pckp_dat("instances_raw/pckp_benchmark/mining/W_11757_83218.lp.dat")
+```
+
+Synthetic instances are not stored at all: they are reproducible from a seed,
+see [instances/](instances/). See [Instances](docs/report/05-instances.md) for
+what to watch out for in the published files — the MineLib tonnage is not
+labelled, and the benchmark's two formats number the items differently.
 
 ## Documentation
 
