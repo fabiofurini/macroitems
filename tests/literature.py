@@ -128,28 +128,31 @@ def shaw_cho_blocks(parent: Sequence[int], p: Sequence[int],
     return blocks
 
 
-def shaw_cho_bound(parent: Sequence[int], p: Sequence[int], w: Sequence[int],
-                   c) -> Fr:
-    """Shaw and Cho (1998), Proposition 2 and Theorem 3: their upper bound.
+def shaw_cho_bound(parent: Sequence[int], p: Sequence[int], w: Sequence[int], c,
+                   blocks: List[Block] = None) -> Tuple[Fr, frozenset]:
+    """Shaw and Cho (1998), Proposition 2 and Theorem 3: their upper bound and
+    their critical item.
 
     Delete subtrees in the order of :func:`shaw_cho_blocks` until the remaining
     demand fits the capacity; the last deleted subtree is their critical item,
     of ratio ``lam``, and the bound is ``p(remaining) + lam * (c - w(remaining))``
-    -- the Lagrangian bound at the multiplier ``lam``.
+    -- the Lagrangian bound at the multiplier ``lam``.  Returns
+    ``(bound, critical item)``, the critical item being ``None`` when the whole
+    tree already fits and nothing has to be deleted.
     """
     c = Fr(c)
     rest_p = Fr(sum(int(v) for v in p))
     rest_w = Fr(sum(int(v) for v in w))
-    lam = None
-    for T, ratio in shaw_cho_blocks(parent, p, w):
+    lam, critical = None, None
+    for T, ratio in (blocks if blocks is not None else shaw_cho_blocks(parent, p, w)):
         if rest_w <= c:
             break
         rest_p -= sum(int(p[i]) for i in T)
         rest_w -= sum(int(w[i]) for i in T)
-        lam = ratio
+        lam, critical = ratio, T
     if lam is None:                      # the whole tree already fits
-        return rest_p
-    return rest_p + lam * (c - rest_w)
+        return rest_p, None
+    return rest_p + lam * (c - rest_w), critical
 
 
 # ------------------------- Sidney (1975) / Margot, Queyranne and Wang (2003)

@@ -1,7 +1,7 @@
 """The same object under other names: the algorithms of three other literatures
 must produce the canonical macroitem sequence of the paper.
 
-The dictionary of Section 8 claims that the translations between the knapsack,
+The dictionary of Section 7 claims that the translations between the knapsack,
 the mining, the scheduling and the parametric-flow readings of the relaxation
 are literal.  The claim is tested here by running the *other communities' own
 algorithms*, reimplemented from their sources in :mod:`tests.literature` and
@@ -100,10 +100,11 @@ def test_shaw_cho_bound_is_the_lp_value(name, parent, p, w):
     deleting subtrees until the demand fits, equals z(c) at every capacity."""
     inst = make_instance(p, w, out_tree_arcs(parent), name)
     path = canonical_path(inst)
+    blocks = shaw_cho_blocks(parent, p, w)
     cumulative = {Fr(int(x)) for x in path.W}
     for k in range(0, 2 * sum(w) + 3):
         c = Fr(k, 2)
-        z = shaw_cho_bound(parent, p, w, c)
+        z, critical = shaw_cho_bound(parent, p, w, c, blocks)
         ctx = (name, str(c))
         assert path.value_function(float(c)) == pytest.approx(float(z), abs=1e-9), ctx
         sol = solution_from_path(inst, path, float(c))
@@ -113,14 +114,6 @@ def test_shaw_cho_bound_is_the_lp_value(name, parent, p, w):
         # breakpoints w(M_r), where theta = 0 and theta = 1 describe the same
         # solution, it is the split macroitem I_h of Definition 4.2
         if 0 < c < Fr(int(path.W[path.q])) and c not in cumulative:
-            deleted = [T for T, _ in shaw_cho_blocks(parent, p, w)]
-            rest_w = Fr(sum(w))
-            critical = None
-            for T in deleted:
-                if rest_w <= c:
-                    break
-                rest_w -= sum(w[i] for i in T)
-                critical = T
             assert frozenset(np.flatnonzero(sol.H).tolist()) == critical, ctx
 
 
@@ -142,10 +135,10 @@ def test_tree_blocks_with_profits_of_both_signs():
 
 @pytest.mark.slow
 def test_shaw_cho_on_larger_trees():
-    """The same two statements on 40 trees of up to 400 items."""
+    """The same two statements on 80 trees of up to 600 items."""
     rng = random.Random(SEED + 2)
-    for t in range(40):
-        n = rng.randint(30, 400)
+    for t in range(80):
+        n = rng.randint(30, 600)
         parent, p, w = random_out_tree(rng, n, spread=rng.choice([0, 1, 4]))
         inst = make_instance(p, w, out_tree_arcs(parent), f"big tree#{t}")
         path = canonical_path(inst)
@@ -155,7 +148,7 @@ def test_shaw_cho_on_larger_trees():
         total = sum(w)
         for k in range(0, 21):
             c = Fr(k * total, 20)
-            z = shaw_cho_bound(parent, p, w, c)
+            z, _ = shaw_cho_bound(parent, p, w, c, blocks)
             assert path.value_function(float(c)) == pytest.approx(float(z), rel=1e-9, abs=1e-9)
 
 
@@ -163,8 +156,10 @@ def test_shaw_cho_on_larger_trees():
 def sidney_cases(n_random: int, n_max: int, seed: int):
     """Small instances of 1|prec|sum w_j C_j as ``(name, p, w, prec)``.
 
-    The hand-made ones are all about ties, which is where the two extreme tie
-    conventions of Margot et al. (finest and reduced decomposition) differ.
+    Most of the hand-made ones are about ties, which is where the two extreme
+    tie conventions of Margot et al. (finest and reduced decomposition) differ;
+    the others are degenerate corners (a single job, a chain, weights equal to
+    zero, an instance that is a single block).
     """
     out = [
         ("independent jobs", [1, 2, 1], [2, 4, 3], []),
@@ -190,7 +185,7 @@ SIDNEY_CASES = sidney_cases(50, 8, SEED + 3)
 
 
 def translated(p, w, prec, name):
-    """The translation of Section 8.1: reverse the arcs (a scheduling pair
+    """The translation of Section 7.1: reverse the arcs (a scheduling pair
     (i, j), "i precedes j", becomes the arc (j, i), "i is a prerequisite of j")
     and take (profit, weight) = (w_j, p_j)."""
     return make_instance(w, p, [(j, i) for (i, j) in prec], name)
@@ -213,8 +208,9 @@ def test_reduced_sidney_decomposition_is_the_canonical_sequence(name, p, w, prec
 @pytest.mark.parametrize("name,p,w,prec", SIDNEY_CASES, ids=[c[0] for c in SIDNEY_CASES])
 def test_sidney_blocks_are_ratio_optimal_initial_sets(name, p, w, prec):
     """Every prefix of the decomposition is an initial set of the scheduling
-    instance -- a closure after the translation -- and the ratios rho of the
-    blocks strictly increase, as in Sidney's Theorem 9."""
+    instance -- a closure after the translation -- and the stored reciprocals
+    1 / rho strictly decrease, that is, the ratios rho of the successive blocks
+    strictly increase, as in Sidney's Theorem 9 (1975, p. 290)."""
     blocks = reduced_sidney_decomposition(len(p), p, w, prec)
     prefix = set()
     for B, _ in blocks:

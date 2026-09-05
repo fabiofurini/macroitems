@@ -259,7 +259,7 @@ def read_minelib_upit(source: str, weight: str = "auto", resource: int = 0,
         b, k = int(parts[0]), int(parts[1])
         arcs.extend((b, int(r)) for r in parts[2:2 + k])
 
-    meta = {"source": "MineLib", "file": os.path.basename(source)}
+    meta = {"source": "MineLib", "family": "minelib", "file": os.path.basename(source)}
     w = np.ones(n)
     if weight == "auto":
         weight, resource, tonnage_column, why = _resolve_minelib_weight(files, n, resource)
