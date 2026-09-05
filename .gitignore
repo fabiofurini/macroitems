@@ -1,3 +1,7 @@
 __pycache__/
 *.pyc
 pilot/pilot.log
+
+# experiment outputs are versioned, but not scratch
+*.log
+.pytest_cache/

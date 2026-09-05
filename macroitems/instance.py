@@ -52,6 +52,39 @@ class Instance:
         order = topological_order(self.n, self.arcs)
         assert order is not None, "precedence graph has a cycle"
 
+    # ------------------------------------------------------------- scaling
+    def is_integral(self) -> bool:
+        """True if profits and weights are integers (the exact-arithmetic regime)."""
+        return bool(np.all(self.p == np.rint(self.p)) and np.all(self.w == np.rint(self.w)))
+
+    def scaled_to_integers(self, max_power: int = 9) -> tuple["Instance", int]:
+        """Return an equivalent instance with integer data, and the scale used.
+
+        Multiplying every profit and weight by the same positive integer
+        rescales the parametric values by that integer and leaves every
+        closure, every macroitem and every ratio order unchanged; capacities
+        scale with the weights.  The optimal value scales by the same factor,
+        so ``z_original(c) = z_scaled(scale * c) / scale``.
+
+        Instances whose data need more than ``max_power`` decimals are left
+        alone (the caller then works in floating point).  Returns ``(self, 1)``
+        when the data are already integral.
+        """
+        if self.is_integral():
+            return self, 1
+        for d in range(1, max_power + 1):
+            scale = 10 ** d
+            if (np.allclose(self.p * scale, np.rint(self.p * scale), rtol=0, atol=1e-6)
+                    and np.allclose(self.w * scale, np.rint(self.w * scale), rtol=0, atol=1e-6)):
+                meta = dict(self.meta)
+                meta["integer_scale"] = scale
+                if "capacity" in meta:
+                    meta["capacity"] = meta["capacity"] * scale
+                out = Instance(np.rint(self.p * scale), np.rint(self.w * scale), self.arcs.copy(),
+                               name=self.name, meta=meta, extra=dict(self.extra))
+                return out, scale
+        return self, 1
+
     def induced(self, nodes: np.ndarray) -> tuple["Instance", np.ndarray]:
         """Sub-instance induced by `nodes` (sorted array of item indices).
         Returns (sub_instance, nodes) where sub item k corresponds to nodes[k]."""

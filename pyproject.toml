@@ -1,0 +1,77 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "macroitems"
+version = "0.2.0.dev0"
+description = "The LP relaxation of the precedence-constrained knapsack problem through parametric maximum closure: canonical macroitem sequences, dual certificates, and optimal-face dimensions"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [
+    { name = "Valerio Dose" },
+    { name = "Fabio Furini", email = "fabio.furini@uniroma1.it" },
+    { name = "Marco Locatelli" },
+]
+keywords = [
+    "precedence-constrained knapsack",
+    "maximum closure",
+    "parametric minimum cut",
+    "open-pit mining",
+    "Sidney decomposition",
+    "linear programming relaxation",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.11",
+]
+
+[project.optional-dependencies]
+# Fast integer max flow (recommended: it is the default backend when present).
+ortools = ["ortools>=9.8"]
+# Alternative max-flow backend, floating-point capacities.
+igraph = ["python-igraph>=0.10"]
+# Open-source LP baseline with model reuse across capacities.
+highs = ["highspy>=1.7"]
+# Public simplified parametric HPF implementation (see docs/solvers.md).
+pseudoflow = ["pseudoflow>=0.5"]
+# Everything needed to reproduce the experiments with open-source software only.
+experiments = [
+    "ortools>=9.8",
+    "python-igraph>=0.10",
+    "highspy>=1.7",
+    "pandas>=2.0",
+    "matplotlib>=3.7",
+    "pyyaml>=6.0",
+]
+test = ["pytest>=7.4", "hypothesis>=6.90"]
+# NOTE: commercial solvers (Gurobi, CPLEX) are NOT declared here and no
+# third-party code ships with this package.  Install them yourself under your
+# own license and macroitems will link to them; see docs/solvers.md.
+
+[project.urls]
+Homepage = "https://github.com/macroitems/macroitems"
+Issues = "https://github.com/macroitems/macroitems/issues"
+
+[project.scripts]
+macroitems = "macroitems.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["macroitems*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["error::DeprecationWarning"]
+markers = [
+    "slow: long-running cross-checks (deselect with '-m \"not slow\"')",
+    "solver: needs an optional LP solver",
+]
