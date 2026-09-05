@@ -62,8 +62,10 @@ def characterize(inst, capacity=None, best_known=None, method="bisection"):
         "median_macroitem": int(np.median(sizes)),
         "n_singleton_macroitems": int((sizes == 1).sum()),
         "size_Mq": int(sum(I.size for I in path.macroitems[:q])),
-        "lambda_1": float(path.ratios[0]) / scale if path.k else float("nan"),
-        "lambda_q": float(path.ratios[q - 1]) / scale if q else float("nan"),
+        # a ratio p/w is invariant under the integer rescaling: both the
+        # numerator and the denominator are multiplied by the same factor
+        "lambda_1": float(path.ratios[0]) if path.k else float("nan"),
+        "lambda_q": float(path.ratios[q - 1]) if q else float("nan"),
         "w_share_first": round(float(weights[0]) / w_pos, 4) if w_pos else "",
         "w_share_first3": round(float(weights[:3].sum()) / w_pos, 4) if w_pos else "",
     }

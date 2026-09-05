@@ -131,6 +131,21 @@ def run_in_subprocess(spec: str, instance: str, capacities: list, timeout: float
             "message": (out.stderr or out.stdout).strip().splitlines()[-1][:200] if (out.stderr or out.stdout).strip() else "no output"}
 
 
+def _write_csv(rows, path):
+    """Write what we have so far, so a long campaign survives an interruption."""
+    if not rows or not path:
+        return
+    fields = sorted({k for r in rows for k in r})
+    head = [f for f in ("instance", "n", "m", "method", "status", "seconds_first",
+                        "seconds_per_extra", "seconds_total") if f in fields]
+    head += [f for f in fields if f not in head]
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    with open(path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=head)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
 def compare(instance: str, n_capacities: int, solvers: tuple, timeout: float) -> list:
     from macroitems.formats import read_any, read_minelib_upit
     reader = read_minelib_upit if not os.path.splitext(instance)[1] else read_any
@@ -184,6 +199,7 @@ def main(argv=None):
     for instance in args.instances:
         print(f"\n{os.path.basename(instance)}  ({args.capacities} capacities)")
         rows += compare(instance, args.capacities, solvers, args.timeout)
+        _write_csv(rows, args.out)          # after every instance, not at the end
 
     if args.out and rows:
         fields = sorted({k for r in rows for k in r})

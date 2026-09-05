@@ -92,15 +92,16 @@ def cmd_path(args) -> int:
     print(f"macroitems    k={path.k}  (q={path.q} with positive ratio)")
     print(f"sizes         max {sizes.max()}, median {int(np.median(sizes))}, "
           f"{int((sizes == 1).sum())} singletons")
-    print(f"ratios        lambda_1={path.ratios[0] / scale:g} ... "
-          f"lambda_k={path.ratios[-1] / scale:g}")
+    # ratios are invariant under the integer rescaling; P and W are not
+    print(f"ratios        lambda_1={path.ratios[0]:g} ... "
+          f"lambda_k={path.ratios[-1]:g}")
     print(f"cost          {path.n_maxflow} maximum flows, {path.seconds:.3f} s")
     if args.check:
         print(f"check         {canonical_path(work, method=args.method).check(work)}")
     if args.json:
         _emit({"instance": inst.name, "n": inst.n, "m": inst.m, "k": path.k, "q": path.q,
                "method": path.method, "n_maxflow": path.n_maxflow, "seconds": path.seconds,
-               "ratios": (path.ratios / scale).tolist(),
+               "ratios": path.ratios.tolist(),
                "cumulative_profit": (path.P / scale).tolist(),
                "cumulative_weight": (path.W / scale).tolist(),
                "macroitems": [I.tolist() for I in path.macroitems]}, args.json)
