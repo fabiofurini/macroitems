@@ -580,4 +580,37 @@ difference above $10^{-9}$ between two methods is flagged in the output, and
 if it is not the \code{kd} case of Section~\ref{sec:accuracy} it is a defect,
 in this library or in a solver, and we would like to hear about it.
 
+%======================================================================
+\appendix
+\section{Results in full}
+\label{sec:full-results}
+
+The tables below are generated from the raw CSV files in
+\code{experiments/results/} by \code{experiments/make\_tables.py}; no number
+is hand-typed. Table~\ref{tab:structure} is the structural characterisation of
+every instance, Table~\ref{tab:methods} the complete method comparison, and
+Table~\ref{tab:recommendation} the recommendation those numbers support.
+
+In Table~\ref{tab:structure}, $k$ is the number of macroitems and $q$ the last
+one with positive ratio; \emph{largest} is the size of the largest macroitem;
+$|\mathcal H|$, \emph{persist.} and \emph{gap bound} are taken at the
+instance's own capacity, where it has one.
+
+In Table~\ref{tab:methods}, \emph{first} is the cost of answering one capacity
+from nothing, \emph{per extra} the marginal cost of each further capacity, and
+\emph{break-even} the number of capacities beyond which computing the whole
+canonical path is the cheaper choice. A status of \code{timeout} means the
+method did not finish one capacity within the budget, which on the largest
+instances is itself the result.
+
+{\footnotesize
+\input{../experiments/results/tables/structure}
+}
+
+{\footnotesize
+\input{../experiments/results/tables/methods}
+}
+
+\input{../experiments/results/tables/recommendation}
+
 \end{document}

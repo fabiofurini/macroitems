@@ -154,6 +154,13 @@
 | K_9235_17082 | 9235 | gurobi:dual-simplex | 0.223 | 0.0361 | 0.91 | 7 |
 | K_9235_17082 | 9235 | gurobi:barrier | 0.537 | 0.4861 | 9.77 | 1 |
 | K_9235_17082 | 9235 | cplex-cli:dual-simplex | 0.367 | 0.0641 | 1.59 | 2 |
+| zuck_small | 9400 | path | 0.448 | 0.0000 | 0.45 |  |
+| zuck_small | 9400 | newton | 0.264 | 0.2121 | 2.17 | 2 |
+| zuck_small | 9400 | highs:dual-simplex | 10.856 | 2.2758 | 31.34 | 1 |
+| zuck_small | 9400 | highs:ipm | 3.830 | 3.3173 | 33.69 | 1 |
+| zuck_small | 9400 | gurobi:dual-simplex | 13.848 | 0.6427 | 19.63 | 1 |
+| zuck_small | 9400 | gurobi:barrier | 15.041 | 17.1200 | 169.12 | 1 |
+| zuck_small | 9400 | cplex-cli:dual-simplex | 5.557 | 1.9086 | 22.73 | 1 |
 | V_10001_63944 | 10001 | path | 0.470 | 0.0000 | 0.47 |  |
 | V_10001_63944 | 10001 | newton | 0.152 | 0.1085 | 2.21 | 4 |
 | V_10001_63944 | 10001 | highs:dual-simplex | 3.004 | 0.3430 | 9.52 | 1 |
@@ -168,3 +175,17 @@
 | W_11757_83218 | 11757 | gurobi:dual-simplex | 5.958 | 0.4925 | 15.32 | 1 |
 | W_11757_83218 | 11757 | gurobi:barrier | 2.856 | 2.0426 | 41.66 | 1 |
 | W_11757_83218 | 11757 | cplex-cli:dual-simplex | 5.156 | 0.3702 | 12.19 | 1 |
+| kd | 14153 | path | 1.162 | 0.0001 | 1.16 |  |
+| kd | 14153 | newton | 0.258 | 0.2150 | 2.19 | 6 |
+| kd | 14153 | highs:dual-simplex | 10.158 | 4.8421 | 53.74 | 1 |
+| kd | 14153 | highs:ipm | 6.682 | 5.3154 | 54.52 | 1 |
+| kd | 14153 | gurobi:dual-simplex | 22.811 | 2.1317 | 42.00 | 1 |
+| kd | 14153 | gurobi:barrier | 11.764 | 8.8330 | 91.26 | 1 |
+| kd | 14153 | cplex-cli:dual-simplex | 13.911 | 7.8421 | 84.49 | 1 |
+| zuck_medium | 29277 | path | 3.155 | 0.0001 | 3.16 |  |
+| zuck_medium | 29277 | newton | 2.243 | 1.8489 | 18.88 | 2 |
+| zuck_medium | 29277 | highs:dual-simplex | - | - | 420.00 |  |
+| zuck_medium | 29277 | highs:ipm | - | - | 420.00 |  |
+| zuck_medium | 29277 | gurobi:dual-simplex | 208.501 | 10.1115 | 299.51 | 1 |
+| zuck_medium | 29277 | gurobi:barrier | - | - | 420.00 |  |
+| zuck_medium | 29277 | cplex-cli:dual-simplex | - | - | 420.00 |  |

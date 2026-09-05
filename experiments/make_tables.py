@@ -66,15 +66,42 @@ def to_markdown(header, rows, aligns=None) -> str:
     return "\n".join(out)
 
 
+_LATEX_ESCAPES = {"\\": r"\textbackslash{}", "&": r"\&", "%": r"\%", "$": r"\$",
+                  "#": r"\#", "_": r"\_", "{": r"\{", "}": r"\}",
+                  "~": r"\textasciitilde{}", "^": r"\textasciicircum{}"}
+
+
+def latex_escape(value) -> str:
+    """Escape a cell for LaTeX.
+
+    Instance names carry underscores, which LaTeX reads as subscripts and
+    which stop the build outside maths mode.
+    """
+    text = str(value)
+    return "".join(_LATEX_ESCAPES.get(ch, ch) for ch in text)
+
+
 def to_latex(header, rows, caption, label, column_spec=None) -> str:
+    """A float for a short table, a longtable for one that cannot fit a page."""
     spec = column_spec or ("l" + "r" * (len(header) - 1))
-    lines = [r"\begin{table}[tbp]", r"\centering",
+    header = [latex_escape(h) for h in header]
+    rows = [[latex_escape(c) for c in row] for row in rows]
+    body = [" & ".join(str(c) for c in row) + r" \\" for row in rows]
+    if len(rows) <= 25:
+        return "\n".join(
+            [r"\begin{table}[tbp]", r"\centering",
              rf"\caption{{{caption}}}", rf"\label{{{label}}}",
              rf"\begin{{tabular}}{{{spec}}}", r"\toprule",
              " & ".join(header) + r" \\", r"\midrule"]
-    lines += [" & ".join(str(c) for c in row) + r" \\" for row in rows]
-    lines += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
-    return "\n".join(lines)
+            + body + [r"\bottomrule", r"\end{tabular}", r"\end{table}"])
+    head = " & ".join(header) + r" \\"
+    return "\n".join(
+        [rf"\begin{{longtable}}{{{spec}}}",
+         rf"\caption{{{caption}}}\label{{{label}}}\\",
+         r"\toprule", head, r"\midrule", r"\endfirsthead",
+         r"\toprule", head, r"\midrule", r"\endhead",
+         r"\bottomrule", r"\endfoot"]
+        + body + [r"\end{longtable}"])
 
 
 # ----------------------------------------------------------------- tables
@@ -193,9 +220,7 @@ def main(argv=None):
         with open(os.path.join(args.out, f"{name}.md"), "w") as f:
             f.write(to_markdown(header, rows) + "\n")
         with open(os.path.join(args.out, f"{name}.tex"), "w") as f:
-            f.write(to_latex([h.replace("%", r"\%").replace("|", "$|$") for h in header],
-                             [[str(c).replace("%", r"\%") for c in row] for row in rows],
-                             caption, label) + "\n")
+            f.write(to_latex(header, rows, caption, label) + "\n")
         made.append(f"{name} ({len(rows)} rows)")
     print("wrote: " + ", ".join(made) if made else "no input CSVs found")
 
