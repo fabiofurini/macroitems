@@ -354,6 +354,79 @@ def random_dag(n: int, avg_out_degree: float = 2.0, seed: int = 0, p_range=(-20,
     return inst
 
 
+def out_tree(n: int, seed: int = 0, spread: int = 3,
+             p_range=(-20, 100), w_range=(1, 10)) -> Instance:
+    """A rooted out-tree: every item has exactly one prerequisite, its parent.
+
+    The setting of the tree knapsack literature (Johnson and Niemi 1983; Shaw
+    and Cho 1998), where the problem is only weakly NP-hard.  Item 0 is the
+    root; item ``i`` draws its parent uniformly from the previous ``spread``
+    items, so the tree is neither a path nor a star.
+    """
+    rng = np.random.default_rng(seed)
+    p = rng.integers(p_range[0], p_range[1] + 1, size=n).astype(float)
+    w = rng.integers(w_range[0], w_range[1] + 1, size=n).astype(float)
+    parents = np.array([max(0, i - 1 - rng.integers(0, spread)) for i in range(1, n)])
+    arcs = np.column_stack([np.arange(1, n), parents]).astype(np.int64)
+    inst = Instance(p, w, arcs, name=f"tree{n}s{seed}",
+                    meta={"generator": "out_tree", "n": n, "seed": seed, "spread": spread})
+    inst.validate()
+    return inst
+
+
+def bipartite(n_top: int, n_bottom: int, avg_degree: float = 3.0, seed: int = 0,
+              p_top=(1, 100), p_bottom=(-100, -1), w_range=(1, 10)) -> Instance:
+    """A two-layer instance: profitable items requiring costly prerequisites.
+
+    The shape of the hardness proofs of the problem (Johnson and Niemi 1983,
+    Theorem 1; Kolliopoulos and Steiner 2007), and the smallest structure on
+    which the natural relaxation is already weak: the top layer carries the
+    profit, the bottom layer the cost, and every top item needs a few bottom
+    ones.
+    """
+    rng = np.random.default_rng(seed)
+    n = n_top + n_bottom
+    p = np.concatenate([rng.integers(p_top[0], p_top[1] + 1, size=n_top),
+                        rng.integers(p_bottom[0], p_bottom[1] + 1, size=n_bottom)]).astype(float)
+    w = rng.integers(w_range[0], w_range[1] + 1, size=n).astype(float)
+    src, dst = [], []
+    for i in range(n_top):
+        deg = max(1, int(rng.poisson(avg_degree)))
+        for j in rng.choice(n_bottom, size=min(deg, n_bottom), replace=False):
+            src.append(i)
+            dst.append(n_top + int(j))
+    arcs = np.column_stack([src, dst]).astype(np.int64)
+    inst = Instance(p, w, arcs, name=f"bip{n_top}x{n_bottom}s{seed}",
+                    meta={"generator": "bipartite", "n_top": n_top,
+                          "n_bottom": n_bottom, "seed": seed})
+    inst.validate()
+    return inst
+
+
+def with_ties(n: int, n_groups: int = 5, seed: int = 0) -> Instance:
+    """An instance whose items fall into groups of exactly equal ratio.
+
+    Ties are where the maximal tie convention has to work: the canonical
+    sequence must merge equal-ratio continuations into one macroitem rather
+    than splitting them arbitrarily.
+    """
+    rng = np.random.default_rng(seed)
+    ratios = np.arange(1, n_groups + 1)
+    group = rng.integers(0, n_groups, size=n)
+    w = rng.integers(1, 6, size=n).astype(float)
+    p = (w * ratios[group]).astype(float)
+    src, dst = [], []
+    for i in range(1, n):
+        for j in rng.choice(i, size=min(2, i), replace=False):
+            src.append(i)
+            dst.append(int(j))
+    arcs = np.column_stack([src, dst]).astype(np.int64) if src else np.zeros((0, 2), np.int64)
+    inst = Instance(p, w, arcs, name=f"ties{n}g{n_groups}s{seed}",
+                    meta={"generator": "with_ties", "n": n, "n_groups": n_groups, "seed": seed})
+    inst.validate()
+    return inst
+
+
 def running_example() -> Instance:
     """The 8-item running instance of the paper (items 1..8 -> 0..7).
     Arcs (i, j): j prerequisite of i.  Canonical sequence {3,6}, {1,2,5}, {4,7,8}

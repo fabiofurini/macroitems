@@ -37,6 +37,31 @@ The two benchmark families behave oppositely: telecom instances decompose into
 many small macroitems (persistency 0.85–0.99), mining instances into few large
 ones.
 
+## Synthetic instances do not reproduce this
+
+Eighteen generated instances — layered block models on three grid sizes,
+random DAGs with n up to 10⁵ at two densities, an out-tree, a bipartite
+instance and one with deliberately tied ratios — behave far more uniformly
+than real data:
+
+| family | largest macroitem, as a share of n |
+|---|---|
+| layered grids (9 instances) | 48% – 65% |
+| random DAGs (6 instances) | 29% – 64% |
+| out-tree | 53% |
+| tied ratios | 9.5% |
+| bipartite | **3.3%** |
+
+Every grid and every random graph puts between a third and two thirds of the
+instance into a single macroitem, with no exception. Real deposits span four
+orders of magnitude instead, from 83% on newman1 to 0.01% on sm2.
+
+A structure generated at random therefore behaves like an unusually
+unfavourable deposit, and a conclusion about the strength of the relaxation
+drawn on synthetic data does not transfer to real ones. Only the bipartite
+family — the shape of the hardness reductions — decomposes finely.
+Raw data: [`characteristics_synthetic.csv`](../../experiments/results/characteristics_synthetic.csv).
+
 ## The published capacities sit in the hard regime
 
 On **all 23** benchmark instances the distributed capacity is between 0.5% and
