@@ -4,7 +4,12 @@
 
 ---
 
-Everything below reduces to maximum closure, which is one minimum cut.
+This page is the inventory: what was implemented, and what each piece costs.
+[Correctness](06-correctness.md) is the companion page — what each piece was
+checked against.
+
+Everything below reduces to maximum closure, which is one minimum cut on a
+Picard network.
 
 | | what it returns | cost |
 |---|---|---|
@@ -40,6 +45,49 @@ piecewise-linear `z(c)` is the concave interpolation of the cumulative points
 panel is `z(c)`, its breakpoints the cumulative macroitem points; the lower bar
 shows the macroitems along the weight axis, shaded by ratio, the first one
 outlined. Computing all of it took 1.2 seconds.*
+
+## The infrastructure around it
+
+Three things were built because the results depend on them, not as
+conveniences.
+
+**Three interchangeable maximum-flow backends** — OR-Tools (int64, exact, the
+default), igraph (floating point), SciPy (int32). They must produce identical
+closures and paths on integer data, and the suite checks it. Having more than
+one is not redundancy: it is how a wrong answer in one of them becomes
+visible ([Defects found](13-defects-found.md), item 3).
+
+**Exact arithmetic wherever the data allow it.** Decimal data are scaled to
+integers by reading the number of decimals off each value's shortest decimal
+representation and scaling in decimal arithmetic — multiplying the floats
+instead fails on data that *are* decimal, because a value like `-2236.7886`
+is not exactly representable and the error is amplified. Closures, macroitems
+and ratios are invariant under the scaling, so the answer is unchanged, but
+the parametric values become integers and the computation is exact. Six of the
+ten MineLib instances and all 23 benchmark instances enter this regime, and
+the dual certificate and the face dimensions are made exact the same way.
+
+**Five LP baselines behind one interface** — HiGHS, SciPy, Gurobi, CPLEX, and
+a CPLEX backend driving a licensed Interactive Optimizer over a pipe, which is
+necessary because the CPLEX distribution on PyPI is the Community Edition and
+refuses models above 1000 rows, that is, every instance here. Each builds its
+model once and re-solves by changing only the capacity right-hand side, so
+simplex bases carry over; build and solve are timed separately. **No
+third-party solver code is bundled** — the solvers are linked and installed
+by the user under their own licences, which is what lets an MIT package be
+used with GPL and commercial software.
+
+Plus instance readers for both published collections, a command line, and the
+experiment scripts that generate every table and figure in this report from
+the raw CSV files.
+
+## What was implemented and then disabled
+
+The reduction of the canonical path to a single parametric minimum cut is
+implemented and tested — and deliberately disabled, because the public
+implementation it would call returns an incomplete family without saying so.
+The reduction is kept so the method can be re-enabled if the package is fixed.
+See [Parametric implementations](11-parametric-implementations.md).
 
 ## What comes for free with it
 
