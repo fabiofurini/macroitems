@@ -50,6 +50,9 @@ from macroitems.stats import heuristic_integer  # noqa: E402
 from forest_fixing import environment, solver_reduced_costs  # noqa: E402
 
 TOL = 1e-7
+MEM_LIMIT_GB = 1.5          # Gurobi
+WORKER_AS_GB = 3.0          # address-space cap of each worker process
+MIN_AVAILABLE_GB = 3.0      # do not start an instance below this available memory
 FIELDS = ["name", "family", "n", "m", "capacity", "status", "k", "h", "F", "H", "Z", "theta",
           "z_lp", "lb", "lb_source", "grb_status", "grb_bound", "grb_seconds", "best_known",
           "gap_lb_pct", "k0", "critical", "dim_primal", "dim_dual",
@@ -69,6 +72,8 @@ def gurobi_incumbent(inst, c, time_limit):
     m.Params.Threads = 1
     m.Params.TimeLimit = time_limit
     m.Params.MIPGap = 0.0
+    m.Params.MemLimit = MEM_LIMIT_GB          # hard cap on Gurobi's memory
+    m.Params.NodefileStart = 0.5              # branch-and-bound nodes go to disk beyond 0.5 GB
     x = m.addMVar(inst.n, vtype=gp.GRB.BINARY)
     m.addConstr(inst.w @ x <= c)
     a = inst.arcs
@@ -77,7 +82,8 @@ def gurobi_incumbent(inst, c, time_limit):
     t0 = time.perf_counter()
     m.optimize()
     secs = time.perf_counter() - t0
-    status = {gp.GRB.OPTIMAL: "optimal", gp.GRB.TIME_LIMIT: "time_limit"}.get(m.Status, str(m.Status))
+    status = {gp.GRB.OPTIMAL: "optimal", gp.GRB.TIME_LIMIT: "time_limit",
+              gp.GRB.MEM_LIMIT: "mem_limit"}.get(m.Status, str(m.Status))
     val, bound = None, None
     if m.SolCount > 0:
         sol = np.rint(x.X).astype(bool)
@@ -138,28 +144,99 @@ def run_one(path_dat, best_known, time_limit):
     return row
 
 
+def available_gb() -> float:
+    with open("/proc/meminfo") as f:
+        for line in f:
+            if line.startswith("MemAvailable:"):
+                return int(line.split()[1]) / 2**20
+    return float("inf")
+
+
+def worker(path_dat, best_known, time_limit, out_json):
+    """Run one instance in this (memory-capped) process and write its row as JSON."""
+    import json
+    row = run_one(path_dat, best_known, time_limit)
+    with open(out_json, "w") as f:
+        json.dump(row, f)
+
+
+def run_isolated(path_dat, best_known, time_limit, tmpdir):
+    """One instance in a child process with an address-space cap and a timeout,
+    so that an instance that needs too much memory cannot freeze the machine."""
+    import json
+    import resource
+    import subprocess
+    out_json = os.path.join(tmpdir, os.path.basename(path_dat) + ".json")
+    cap = int(WORKER_AS_GB * 2**30)
+
+    def limit():
+        resource.setrlimit(resource.RLIMIT_AS, (cap, cap))
+        os.nice(10)
+
+    cmd = [sys.executable, os.path.abspath(__file__), "--worker", path_dat, "--best-known", str(best_known),
+           "--time-limit", str(time_limit), "--worker-out", out_json]
+    try:
+        r = subprocess.run(cmd, preexec_fn=limit, timeout=time_limit + 1800, capture_output=True, text=True)
+    except subprocess.TimeoutExpired:
+        return {"status": "worker_timeout"}
+    if r.returncode != 0 or not os.path.exists(out_json):
+        tail = (r.stderr or "").strip().splitlines()[-1:] or [""]
+        kind = "worker_memory" if "MemoryError" in (r.stderr or "") or r.returncode in (-9, 137) else "worker_error"
+        return {"status": f"{kind}: {tail[0][:80]}"}
+    with open(out_json) as f:
+        return json.load(f)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--instances", default="instances_raw/pckp_benchmark")
     ap.add_argument("--out", default="experiments/results/literature_fixing.csv")
     ap.add_argument("--time-limit", type=float, default=300.0)
     ap.add_argument("--only", default="", help="comma list of instance names")
+    ap.add_argument("--resume", action="store_true", help="keep the rows already in --out and skip those instances")
+    ap.add_argument("--worker", help=argparse.SUPPRESS)
+    ap.add_argument("--worker-out", help=argparse.SUPPRESS)
+    ap.add_argument("--best-known", default="", help=argparse.SUPPRESS)
     a = ap.parse_args(argv)
+    if a.worker:
+        worker(a.worker, a.best_known, a.time_limit, a.worker_out)
+        return
+    import tempfile
+    import time as _time
     manifest = {r["name"]: r for r in csv.DictReader(open(os.path.join(a.instances, "MANIFEST.csv")))}
     files = sorted(glob.glob(os.path.join(a.instances, "telecom", "*.lp.dat")) +
                    glob.glob(os.path.join(a.instances, "mining", "*.lp.dat")))
     if a.only:
         keep = set(a.only.split(","))
         files = [f for f in files if os.path.basename(f).replace(".lp.dat", "") in keep]
+    name_of = lambda f: os.path.basename(f).replace(".lp.dat", "")
+    # smallest first: n + m from the manifest
+    files.sort(key=lambda f: int(manifest[name_of(f)]["n"]) + int(manifest[name_of(f)]["m"]))
+    done = []
+    if a.resume and os.path.exists(a.out):
+        with open(a.out) as f:
+            done = [r for r in csv.DictReader(line for line in f if not line.startswith("#")) if r["status"] == "ok"]
+    done_names = {r["name"] for r in done}
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
+    tmpdir = tempfile.mkdtemp(prefix="litfix-")
     with open(a.out, "w", newline="") as f:
-        f.write(f"# literature_fixing.py time_limit={a.time_limit} instances={len(files)}\n# {environment()}\n")
+        f.write(f"# literature_fixing.py time_limit={a.time_limit} instances={len(files)} "
+                f"gurobi_mem_limit_gb={MEM_LIMIT_GB} worker_cap_gb={WORKER_AS_GB}\n# {environment()}\n")
         wr = csv.DictWriter(f, fieldnames=FIELDS)
         wr.writeheader()
+        for r in done:
+            wr.writerow({k: r.get(k, "") for k in FIELDS})
+        f.flush()
         for path_dat in files:
-            name = os.path.basename(path_dat).replace(".lp.dat", "")
+            name = name_of(path_dat)
+            if name in done_names:
+                continue
+            while available_gb() < MIN_AVAILABLE_GB:
+                print(f"waiting: only {available_gb():.1f} GB available", file=sys.stderr, flush=True)
+                _time.sleep(30)
             bk = manifest.get(name, {}).get("best_known_primal", "")
-            row = run_one(path_dat, bk, a.time_limit)
+            row = run_isolated(path_dat, bk, a.time_limit, tmpdir)
+            row.update(name=name, family=os.path.basename(os.path.dirname(path_dat)))
             wr.writerow({k: row.get(k, "") for k in FIELDS})
             f.flush()
             print(f"{name:14s} {row['status']:10s} {row.get('seconds', '')}", file=sys.stderr, flush=True)
