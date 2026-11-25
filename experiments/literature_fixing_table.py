@@ -36,6 +36,8 @@ def main(argv=None):
     ok = [r for r in rows if r["status"] == "ok"]
     g = lambda x: "\\gen{" + x + "}"
     pct = lambda r, k: 100 * int(r[k]) / int(r["Z"]) if int(r["Z"]) else 0.0
+    zip_ = lambda r: float(r["lb"])                       # = z_IP when Gurobi proved optimality
+    gap = lambda r: 100 * (float(r["z_lp"]) - zip_(r)) / abs(zip_(r))
     body = []
     for fam in ("telecom", "mining"):
         R = [r for r in ok if r["family"] == fam]
@@ -44,9 +46,10 @@ def main(argv=None):
         for r in R:
             name = r["name"].split("_")[0]
             star = "" if r["grb_status"] == "optimal" else "$^*$"
-            cells = [r["n"], r["m"], r["H"], r["Z"], f"{float(r['gap_lb_pct']):.1f}" ,
-                     f"{pct(r, 'fix_Z_solver'):.1f}", f"{pct(r, 'fix_Z_canonical'):.1f}",
-                     f"{pct(r, 'fix_Z_best'):.1f}", f"{float(r['rc_gain_median']):.1f}"]
+            cells = [r["n"], r["m"], r["H"], r["Z"], r["dim_dual"], f"{gap(r):.1f}",
+                     f"{pct(r, 'fix_Z_solver'):.1f}",
+                     f"{pct(r, 'fix_Z_best'):.1f}", f"{pct(r, 'fix_Z_best_heur'):.1f}",
+                     f"{float(r['seconds_rc']):.1f}"]
             body.append(f"{name}{star} & " + " & ".join(g(c) for c in cells) + "\\\\")
     best = [pct(r, "fix_Z_best") for r in ok]
     solver = [pct(r, "fix_Z_solver") for r in ok]
@@ -67,7 +70,15 @@ def main(argv=None):
         "litMinZbestMax": str(half_up(max(pct(r, "fix_Z_best") for r in mine))),
         "litZsolverMax": f"{max(solver):.1f}", "litZcanonicalMax": f"{max(canon):.1f}",
         "litZeroFix": str(len(zero)),
-        "litZeroGapMin": str(half_up(min(float(r["gap_lb_pct"]) for r in zero))) if zero else "0",
+        "litZeroGapMin": str(half_up(min(gap(r) for r in zero))) if zero else "0",
+        "litTelZbestHeurMin": str(half_up(min(pct(r, "fix_Z_best_heur") for r in tel))),
+        "litTelZbestHeurMax": str(half_up(max(pct(r, "fix_Z_best_heur") for r in tel))),
+        "litMinZbestHeurMax": str(half_up(max(pct(r, "fix_Z_best_heur") for r in mine))),
+        "litZsolverHeurMax": f"{max(pct(r, 'fix_Z_solver_heur') for r in ok):.1f}",
+        "litDimDualMin": f"{min(int(r['dim_dual']) for r in ok):,}".replace(",", "{,}"),
+        "litDimDualMax": f"{max(int(r['dim_dual']) for r in ok):,}".replace(",", "{,}"),
+        "litRcTimeMax": str(half_up(max(float(r["seconds_rc"]) for r in ok))),
+        "litRcTimeMedian": f"{statistics.median(float(r['seconds_rc']) for r in ok):.1f}",
         "litGainMin": str(half_up(min(gains))), "litGainMax": str(half_up(max(gains))),
         "litGainMedian": str(half_up(statistics.median(gains))),
     }

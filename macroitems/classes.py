@@ -169,8 +169,9 @@ def split_structure(inst: Instance, sol: LPSolution, c: float, max_H: int = 2000
         raise ValueError("split_structure needs a nondegenerate capacity (nonempty split macroitem)")
     nodes, _, Tm, n_mf = minimal_tight_sets(inst, sol, max_H)
     k = nodes.size
-    mutual = Tm & Tm.T
-    _, label = connected_components(csr_matrix(mutual), directed=False)
+    # i ~ j iff T_i = T_j (smallest tight subsets): group identical rows of Tm
+    _, label = np.unique(np.packbits(Tm, axis=1), axis=0, return_inverse=True)
+    label = np.asarray(label).ravel()
     # one representative per class; order classes by the size of their down-set,
     # which is compatible with the order (strict inclusion means smaller size)
     reps: Dict[int, int] = {}

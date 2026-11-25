@@ -11,6 +11,8 @@ records:
   ``--time-limit`` seconds (one thread), checked for feasibility, or the
   macroitem heuristic if that is better.  The best known value of the
   literature is recorded next to it for reference;
+* the same shares against the macroitem heuristic alone (``*_heur`` columns), a
+  bound that is available at no cost before any search;
 * the share of the items of ``Z`` and of ``F`` fixed against ``LB`` by three
   sets of reduced costs:
   * those of the dual optimum returned by HiGHS through SciPy (``solver``);
@@ -57,6 +59,7 @@ FIELDS = ["name", "family", "n", "m", "capacity", "status", "k", "h", "F", "H", 
           "z_lp", "lb", "lb_source", "grb_status", "grb_bound", "grb_seconds", "best_known",
           "gap_lb_pct", "k0", "critical", "dim_primal", "dim_dual",
           "fix_Z_solver", "fix_Z_canonical", "fix_Z_best", "fix_F_solver", "fix_F_canonical", "fix_F_best",
+          "lb_heur", "fix_Z_solver_heur", "fix_Z_best_heur", "fix_F_best_heur",
           "rc_gain_median", "seconds_rc", "seconds_classes", "seconds"]
 
 
@@ -125,7 +128,8 @@ def run_one(path_dat, best_known, time_limit):
     t1 = time.perf_counter()
     best = best_reduced_costs(inst, sol).value
     t_rc = time.perf_counter() - t1
-    fixed = lambda rc, region: int(np.sum(rc[region] > gap + TOL))
+    fixed = lambda rc, region, g=gap: int(np.sum(rc[region] > g + TOL))
+    gap_heur = sol.value - heur
     with np.errstate(divide="ignore", invalid="ignore"):
         gain = best[F | Z] / canon[F | Z]
     # faces and classes
@@ -138,6 +142,8 @@ def run_one(path_dat, best_known, time_limit):
                dim_primal=fi.dim_primal, dim_dual=fi.dim_dual,
                fix_Z_solver=fixed(s_sol, Z), fix_Z_canonical=fixed(canon, Z), fix_Z_best=fixed(best, Z),
                fix_F_solver=fixed(mu_sol, F), fix_F_canonical=fixed(canon, F), fix_F_best=fixed(best, F),
+               lb_heur=heur, fix_Z_solver_heur=fixed(s_sol, Z, gap_heur),
+               fix_Z_best_heur=fixed(best, Z, gap_heur), fix_F_best_heur=fixed(best, F, gap_heur),
                rc_gain_median=round(float(np.median(gain[np.isfinite(gain)])), 3),
                seconds_rc=round(t_rc, 2), seconds_classes=round(t_cl, 2),
                seconds=round(time.perf_counter() - t0, 2))

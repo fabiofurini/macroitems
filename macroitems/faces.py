@@ -104,8 +104,9 @@ def face_dimensions(inst: Instance, sol: LPSolution, max_H: int = 20000) -> Face
     k = nodes.size
     T_list = list(Tm)
     # inseparability classes: i ~ j iff Tm[i, j] and Tm[j, i]
-    mutual = Tm & Tm.T
-    ncomp, _ = connected_components(csr_matrix(mutual), directed=False)
+    # i ~ j iff j in T_i and i in T_j, i.e. iff T_i = T_j: group identical rows.
+    # (Avoids a dense |H| x |H| sparse matrix, which is full when k0 = 1.)
+    ncomp = int(np.unique(np.packbits(Tm, axis=1), axis=0).shape[0])
     k0 = int(ncomp)
     # E_0: arcs (i, j) in A(H) with i not in T_j
     sub_arcs = sub.arcs
