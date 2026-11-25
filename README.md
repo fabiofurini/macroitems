@@ -134,7 +134,7 @@ macroitems gen grid  --nx 36 --ny 36 --nz 11 --cone 9 --seed 2 --out grid.txt
 
 ## Correctness
 
-`pytest` runs 773 tests in about a minute. They are not decorative: small
+`pytest` runs 782 tests in about a minute. They are not decorative: small
 instances are checked against a **brute-force reference in exact rational
 arithmetic** that enumerates every closure — `u(lambda)` and both lattice
 extremes at every breakpoint, the canonical sequence from its definition, the
@@ -254,7 +254,7 @@ labelled, and the benchmark's two formats number the items differently.
 | [Definitions and conventions](docs/report/03-definitions-and-conventions.md) | **read this first** — arc direction, tie convention, regions, exact arithmetic |
 | [Setup and protocol](docs/report/04-setup.md) | machine, versions, how the timings were taken |
 | [Instances](docs/report/05-instances.md) | where to get them, and what to watch out for in the files |
-| [Correctness](docs/report/06-correctness.md) | what the 773 tests actually check |
+| [Correctness](docs/report/06-correctness.md) | what the 782 tests actually check |
 | [Structure of real instances](docs/report/07-structure-of-real-instances.md) | persistency, and the gap problem measured |
 | [How best to solve it](docs/report/08-how-best-to-solve-it.md) | the method comparison |
 | [Accuracy](docs/report/09-accuracy.md) | where the LP solvers return a wrong value |

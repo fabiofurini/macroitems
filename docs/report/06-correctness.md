@@ -4,7 +4,7 @@
 
 ---
 
-`pytest` runs **773 tests** in about seventy seconds. They are the reason to
+`pytest` runs **782 tests** in about seventy seconds. They are the reason to
 trust every number in this report, so it is worth saying what they actually
 check.
 
@@ -25,6 +25,23 @@ The degenerate cases are in there deliberately: all profits negative, all
 positive, zero profits, a single item, no arcs, stars, chains, and instances
 built so that two disjoint continuations have equal ratio — the tie convention
 is where this subject hides its bugs.
+
+## Optimal faces, fixing and branching
+
+`tests/test_optimal_faces.py` checks the results of the optimal-faces paper on
+several hundred random general DAGs and forests with many ties. Each check is
+against an independent computation:
+
+| what | against |
+|---|---|
+| inseparability classes, their order, down- and up-sets, maximal chains | exact enumeration of every tight subset (rational arithmetic) |
+| the strongest reduced costs $s^\star$, $\mu^\star$ | an LP that maximizes the dual slack over the dual optimal face |
+| whether branching on one item or on a pair lowers the bound | the LP relaxation with those variables fixed |
+| the linear-time forest algorithms | the general minimum-cut implementation |
+| the numbers of the running example | the paper |
+
+These tests found one error in a draft of the paper: a hook-length count that
+holds for in-forests but not for out-forests.
 
 ## Invariants on arbitrary instances
 
