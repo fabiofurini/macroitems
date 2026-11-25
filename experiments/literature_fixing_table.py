@@ -52,14 +52,22 @@ def main(argv=None):
     solver = [pct(r, "fix_Z_solver") for r in ok]
     canon = [pct(r, "fix_Z_canonical") for r in ok]
     gains = [float(r["rc_gain_median"]) for r in ok]
+    tel = [r for r in ok if r["family"] == "telecom"]
+    mine = [r for r in ok if r["family"] == "mining"]
+    zero = [r for r in ok if int(r["fix_Z_best"]) == 0]
     macros = {
         "litInstances": str(len(ok)),
+        "litTelecom": str(len(tel)), "litMining": str(len(mine)),
         "litFempty": str(sum(int(r["F"]) == 0 for r in ok)),
         "litKzeroOne": str(sum(int(r["k0"]) == 1 for r in ok)),
         "litOptimal": str(sum(r["grb_status"] == "optimal" for r in ok)),
-        "litZbestMin": str(half_up(min(best))), "litZbestMax": str(half_up(max(best))),
         "litZbestMedian": str(half_up(statistics.median(best))),
-        "litZsolverMax": str(half_up(max(solver))), "litZcanonicalMax": str(half_up(max(canon))),
+        "litTelZbestMin": str(half_up(min(pct(r, "fix_Z_best") for r in tel))),
+        "litTelZbestMax": str(half_up(max(pct(r, "fix_Z_best") for r in tel))),
+        "litMinZbestMax": str(half_up(max(pct(r, "fix_Z_best") for r in mine))),
+        "litZsolverMax": f"{max(solver):.1f}", "litZcanonicalMax": f"{max(canon):.1f}",
+        "litZeroFix": str(len(zero)),
+        "litZeroGapMin": str(half_up(min(float(r["gap_lb_pct"]) for r in zero))) if zero else "0",
         "litGainMin": str(half_up(min(gains))), "litGainMax": str(half_up(max(gains))),
         "litGainMedian": str(half_up(statistics.median(gains))),
     }
