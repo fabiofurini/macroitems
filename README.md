@@ -165,7 +165,8 @@ Every test is seeded, so two runs give the same result.
 ```bash
 python experiments/forest_fixing.py --out experiments/results/forest_fixing.csv
 python experiments/forest_fixing_table.py experiments/results/forest_fixing.csv \
-       --out experiments/results/tables/forest_fixing.tex
+       --rows experiments/results/tables/forest_fixing.tex \
+       --macros experiments/results/tables/forest_fixing_macros.tex
 ```
 
 The first command takes about two minutes and needs `gurobipy` for the
