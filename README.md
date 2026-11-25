@@ -129,6 +129,8 @@ macroitems gen grid  --nx 36 --ny 36 --nz 11 --cone 9 --seed 2 --out grid.txt
 | `macroitems.lp` | LP-solver baselines behind one interface (HiGHS, Gurobi, CPLEX) |
 | `macroitems.formats` | readers for MineLib and for the PCKP benchmark |
 | `macroitems.cli` | the `macroitems` command line |
+| `split_structure` | inseparability classes of the split macroitem, their order, the weights of the down- and up-sets, the critical class, attainable 0/1 patterns and `bound_decreases(T)` (does branching on `T` lower the LP bound?), number of maximal chains of the primal face |
+| `macroitems.forests` | on precedence forests, in linear time: strongest reduced costs (`forest_reduced_costs`), classes and critical class (`forest_split_structure`), hook-length count |
 
 ## Correctness
 
@@ -144,6 +146,34 @@ claims with other literatures are checked by reimplementing *their*
 algorithms independently — Dantzig's greedy rule with no precedences, the
 subtree aggregation of Shaw and Cho on trees, and the reduced Sidney
 decomposition of Margot, Queyranne and Wang computed by brute force.
+
+`tests/test_optimal_faces.py` checks the optimal-face results on several
+hundred random instances with many ties, each against an independent
+computation:
+* the classes, the order and the maximal chains, against an exact enumeration
+  of every tight subset;
+* the face-wide reduced costs, against an LP that maximizes the dual slack over
+  the dual optimal face;
+* `bound_decreases`, against the LP with the variables fixed, for every item and
+  every pair;
+* the forest algorithms, against the general minimum-cut ones.
+
+Every test is seeded, so two runs give the same result.
+
+## Experiments of the optimal-faces paper
+
+```bash
+python experiments/forest_fixing.py --out experiments/results/forest_fixing.csv
+python experiments/forest_fixing_table.py experiments/results/forest_fixing.csv \
+       --out experiments/results/tables/forest_fixing.tex
+```
+
+The first command takes about two minutes and needs `gurobipy` for the
+certified integer optimum. It produces variable fixing on random precedence
+forests, 9 classes × 30 instances. Every instance has its own seed. Every
+attempt, including the discarded ones and the reason, is a row of the CSV, and
+the CSV header records the versions of Python, NumPy, SciPy and Gurobi. Two runs
+give identical CSVs apart from the timing columns.
 
 ## Instances
 

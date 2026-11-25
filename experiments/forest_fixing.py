@@ -173,6 +173,19 @@ def solver_reduced_costs(inst: Instance, c: float):
     return -r.fun, s, mu
 
 
+def environment() -> str:
+    """Versions of everything that can change a number in the CSV."""
+    import scipy
+    import macroitems
+    try:
+        import gurobipy
+        grb = ".".join(map(str, gurobipy.gurobi.version()))
+    except ImportError:
+        grb = "missing"
+    return (f"python={platform.python_version()} numpy={np.__version__} scipy={scipy.__version__} "
+            f"gurobi={grb} macroitems={macroitems.__version__} platform={platform.platform()}")
+
+
 # ------------------------------------------------------------ one instance
 def run_one(orient, profits, attempt, seed, n, time_limit):
     t0 = time.perf_counter()
@@ -223,7 +236,7 @@ def main(argv=None):
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
     with open(a.out, "w", newline="") as f:
         f.write(f"# forest_fixing.py n={a.n} reps={a.reps} base_seed={a.base_seed} "
-                f"time_limit={a.time_limit} python={platform.python_version()}\n")
+                f"time_limit={a.time_limit}\n# {environment()}\n")
         wr = csv.DictWriter(f, fieldnames=FIELDS)
         wr.writeheader()
         for ci, (orient, profits) in enumerate(classes):

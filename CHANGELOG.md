@@ -1,5 +1,30 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+* **`macroitems.classes`**: `split_structure` gives, at a nondegenerate
+  capacity:
+  * the inseparability classes of the split macroitem and their order;
+  * the weights of the down- and up-sets and the critical class;
+  * the attainability of 0/1 patterns, and whether branching on a set of
+    variables lowers the LP bound;
+  * the number of maximal chains of tight subsets.
+* **`macroitems.faces.minimal_tight_sets`**: the smallest tight subset
+  containing each item of the split macroitem, now public.
+* **`macroitems.forests`**: linear-time rerooting recursion for closure
+  problems on precedence forests, with:
+  * the strongest reduced costs;
+  * the classes and the critical class;
+  * the hook-length count, whose hook is the up-set on in-forests and the
+    down-set on out-forests.
+* **`tests/test_optimal_faces.py`**: the above checked against exact
+  enumeration, an LP over the dual face, and the branch LPs.
+* **`experiments/forest_fixing.py`** and **`forest_fixing_table.py`**:
+  reproducible variable-fixing experiment on random forests, with per-instance
+  seeds, a certified integer optimum and the environment recorded.
+
 ## 0.2.0 — 5 September 2026
 
 First public version. Everything below is relative to the internal 0.1.0
