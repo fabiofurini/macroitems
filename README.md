@@ -176,6 +176,28 @@ attempt, including the discarded ones and the reason, is a row of the CSV, and
 the CSV header records the versions of Python, NumPy, SciPy and Gurobi. Two runs
 give identical CSVs apart from the timing columns.
 
+### The PCKP benchmark (literature instances)
+
+```bash
+gh release download -R fabiofurini/macroitems --pattern instances.zip && unzip instances.zip -d instances_raw
+python experiments/literature_fixing.py --out experiments/results/literature_fixing.csv
+python experiments/literature_fixing_table.py experiments/results/literature_fixing.csv \
+       --rows experiments/results/tables/literature_fixing.tex \
+       --macros experiments/results/tables/literature_fixing_macros.tex
+```
+
+The experiment runs about 15 minutes. For each of the 23 benchmark instances,
+at its own capacity, it records:
+* the regions, $k_0$ and the dimensions of both optimal faces;
+* the integer optimum certified by Gurobi;
+* the share of items fixed by the solver's dual optimum, by the canonical
+  reduced costs, and by the strongest reduced costs;
+* the same shares against the macroitem heuristic;
+* the time needed to compute the strongest reduced costs.
+
+Each instance runs in its own memory-capped process, so a large instance
+cannot exhaust the machine.
+
 ## Instances
 
 The study uses two public collections, **neither of which is ours**. They are

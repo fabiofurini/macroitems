@@ -21,6 +21,12 @@
     down-set on out-forests.
 * **`tests/test_optimal_faces.py`**: the above checked against exact
   enumeration, an LP over the dual face, and the branch LPs.
+* **`experiments/literature_fixing.py`** and **`literature_fixing_table.py`**:
+  variable fixing and optimal faces on the 23 PCKP benchmark instances, with a
+  certified integer optimum, the heuristic incumbent, timings, and one
+  memory-capped process per instance.
+* **Classes** are now grouped by identical minimal tight sets, which avoids a
+  dense $|H|\times|H|$ matrix on large split macroitems.
 * **`experiments/forest_fixing.py`** and **`forest_fixing_table.py`**:
   reproducible variable-fixing experiment on random forests, with per-instance
   seeds, a certified integer optimum and the environment recorded.
