@@ -48,13 +48,16 @@ def _is_integral(a: np.ndarray) -> bool:
     return bool(np.all(a == np.rint(a)))
 
 
-def face_dimensions(inst: Instance, sol: LPSolution, max_H: int = 20000) -> FaceInfo:
-    t0 = time.perf_counter()
-    F, H, Z = sol.F, sol.H, sol.Z
-    a = inst.arcs
-    inF = F[a[:, 0]] & F[a[:, 1]] if inst.m else np.zeros(0, bool)
-    inZ = Z[a[:, 0]] & Z[a[:, 1]] if inst.m else np.zeros(0, bool)
-    inH = H[a[:, 0]] & H[a[:, 1]] if inst.m else np.zeros(0, bool)
+def minimal_tight_sets(inst: Instance, sol: LPSolution, max_H: int = 20000):
+    """Smallest tight subset of ``H`` containing each item of ``H``.
+
+    Returns ``(nodes, sub, Tm, n_maxflow)``: ``nodes`` are the items of ``H`` in
+    increasing order, ``sub`` the instance they induce, and ``Tm[i, j]`` is True
+    iff ``nodes[j]`` lies in the smallest tight subset containing ``nodes[i]``
+    (``H`` itself when no proper tight subset contains it).  One maximum flow
+    per item of ``H``.
+    """
+    H = sol.H
     nodes = np.flatnonzero(H)
     k = nodes.size
     if k > max_H:
@@ -74,7 +77,6 @@ def face_dimensions(inst: Instance, sol: LPSolution, max_H: int = 20000) -> Face
     v = np.rint(sub.p * den - (sol.lam * den) * sub.w) if den != 1.0 else sub.p - sol.lam * sub.w
     solver = ClosureSolver(sub)
     # minimal tight set containing each item
-    T = np.zeros((k, k), dtype=bool) if k <= 4000 else None
     T_list = []
     tol = 1e-7 * max(1.0, float(np.abs(v).sum()))
     n_mf = 0
@@ -88,9 +90,19 @@ def face_dimensions(inst: Instance, sol: LPSolution, max_H: int = 20000) -> Face
         else:
             mask = np.ones(k, dtype=bool)     # only H itself
         T_list.append(mask)
-        if T is not None:
-            T[i] = mask
-    Tm = np.array(T_list)                      # Tm[i, j] = j in T_i
+    return nodes, sub, np.array(T_list), n_mf
+
+
+def face_dimensions(inst: Instance, sol: LPSolution, max_H: int = 20000) -> FaceInfo:
+    t0 = time.perf_counter()
+    F, H, Z = sol.F, sol.H, sol.Z
+    a = inst.arcs
+    inF = F[a[:, 0]] & F[a[:, 1]] if inst.m else np.zeros(0, bool)
+    inZ = Z[a[:, 0]] & Z[a[:, 1]] if inst.m else np.zeros(0, bool)
+    inH = H[a[:, 0]] & H[a[:, 1]] if inst.m else np.zeros(0, bool)
+    nodes, sub, Tm, n_mf = minimal_tight_sets(inst, sol, max_H)
+    k = nodes.size
+    T_list = list(Tm)
     # inseparability classes: i ~ j iff Tm[i, j] and Tm[j, i]
     mutual = Tm & Tm.T
     ncomp, _ = connected_components(csr_matrix(mutual), directed=False)

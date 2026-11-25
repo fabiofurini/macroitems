@@ -9,7 +9,10 @@ from .closure import ClosureSolver, max_closure, is_closure
 from .path import canonical_path, solve_capacity, solution_from_path, canonical_dual, canonical_reduced_costs
 from .lp import (LPResult, LPBackend, solve_lp, available_lp_backends, get_lp_backend,
                  HighsBackend, ScipyBackend, GurobiBackend, CplexBackend)
-from .faces import face_dimensions
+from .faces import face_dimensions, minimal_tight_sets
+from .classes import SplitStructure, split_structure, count_linear_extensions
+from .forests import (is_forest, forest_min_closed, forest_reduced_costs, forest_split_structure,
+                      hook_length_count)
 # Parametric minimum cut through the optional 'pseudoflow' package.  Disabled:
 # the public implementation misses breakpoints (see macroitems/pseudoflow_path.py).
 from .pseudoflow_path import canonical_path_pseudoflow, pseudoflow_available
