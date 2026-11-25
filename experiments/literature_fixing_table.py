@@ -40,7 +40,7 @@ def main(argv=None):
     gap = lambda r: 100 * (float(r["z_lp"]) - zip_(r)) / abs(zip_(r))
     body = []
     for fam in ("telecom", "mining"):
-        R = [r for r in ok if r["family"] == fam]
+        R = sorted((r for r in ok if r["family"] == fam), key=lambda r: r["name"])
         if body and R:
             body.append("\\midrule")
         for r in R:
