@@ -18,3 +18,6 @@ report/*.out
 report/*.toc
 report/*.fls
 report/*.fdb_latexmk
+
+# third-party instances (download from the release, never commit)
+instances_raw/
