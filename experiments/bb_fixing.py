@@ -41,7 +41,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from macroitems import canonical_path, solution_from_path  # noqa: E402
-from macroitems.dual import best_reduced_costs  # noqa: E402
+from macroitems.fastrc import fast_reduced_costs  # noqa: E402
 from macroitems.formats import read_pckp_dat  # noqa: E402
 from macroitems.stats import heuristic_integer  # noqa: E402
 from forest_fixing import environment, solver_reduced_costs  # noqa: E402
@@ -99,9 +99,8 @@ def run_instance(path_dat, seeds, time_limit):
     lb = heuristic_integer(inst, path, c)
     gap = sol.value - lb
     _, s_sol, mu_sol = solver_reduced_costs(inst, c)
-    t0 = time.perf_counter()
-    best = best_reduced_costs(inst, sol).value
-    rc_secs = time.perf_counter() - t0
+    best, rc_stats = fast_reduced_costs(inst, sol, "tree", return_stats=True)
+    rc_secs = sum(rc_stats[r][2] for r in ("Z", "F") if r in rc_stats)   # measured inside C++
     Z, F = sol.Z, sol.F
     fixes = {
         "base": (np.zeros(0, int), np.zeros(0, int)),
