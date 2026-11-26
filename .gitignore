@@ -21,3 +21,7 @@ report/*.fdb_latexmk
 
 # third-party instances (download from the release, never commit)
 instances_raw/
+
+# third-party max-flow code: kept local until its redistribution is cleared
+cpp/third_party/
+cpp/build/
