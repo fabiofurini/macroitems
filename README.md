@@ -45,6 +45,27 @@ macroitem points; the lower bar shows the 493 macroitems along the weight axis,
 shaded by ratio, the first one outlined. One call computes all of it — every
 capacity at once — in 1.2 seconds.*
 
+## Repository layout
+
+```
+macroitems/        the library (Python): paths, LP solutions, duals, faces, classes, forests
+  fastrc.py        Python interface to the C++ engine below
+cpp/
+  rc_engine.cpp    C++ engine: strongest reduced costs and tight sets by incremental maximum flows
+tests/             pytest suite: brute-force references, independent checks (test_fastrc.py for the C++ engine)
+experiments/       scripts that produce every table and number of the two manuscripts
+  results/         raw CSVs (one row per run, versions in the header), LaTeX tables, figures
+instances/         generators of the synthetic instances (by seed)
+docs/report/       the computational report, as navigable pages
+report/            the same report as a single PDF
+examples/          quickstart.py
+```
+
+| experiments of | scripts in `experiments/` | details |
+|---|---|---|
+| the computational study (methods, accuracy, structure of real instances) | `compare_methods.py`, `characterize.py`, `revenue_factor.py`, `make_tables.py`, `make_paper_tables.py`, `make_figures.py` | [the report](docs/report/), [reproducing it](docs/report/14-reproducing-this-report.md) |
+| the optimal-faces paper (reduced costs, fixing, branching, forests) | `forest_fixing.py`, `literature_fixing.py`, `rc_timing.py`, `bb_fixing.py`, and their `*_table.py` | [below](#experiments-of-the-optimal-faces-paper) |
+
 ## Why you might want it
 
 **It computes every capacity at once.** The canonical sequence *is* the whole
