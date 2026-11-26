@@ -123,7 +123,8 @@ macroitems gen grid  --nx 36 --ny 36 --nz 11 --cone 9 --seed 2 --out grid.txt
 | `solve_capacity` | the LP at one capacity, by a Newton search on the weight price |
 | `solution_from_path` | any capacity from a precomputed path, in `O(log k)` |
 | `canonical_dual` | the canonical dual certificate: three region-wise flows |
-| `best_reduced_costs` | reduced costs over the whole dual optimal face |
+| `best_reduced_costs` | reduced costs over the whole dual optimal face (reference: one maximum closure per item) |
+| `macroitems.fastrc` | the same reduced costs and the smallest tight sets, exactly and fast, by the C++ engine `cpp/rc_engine.cpp` (see below) |
 | `face_dimensions` | dimensions of the primal and dual optimal faces |
 | `first_macroitem_lawler` | Lawler's binary search, for comparison |
 | `macroitems.lp` | LP-solver baselines behind one interface (HiGHS, Gurobi, CPLEX) |
@@ -162,6 +163,22 @@ Every test is seeded, so two runs give the same result.
 
 ## Experiments of the optimal-faces paper
 
+Every table and every number quoted in the computational section of the paper
+is produced by a script of `experiments/` from a CSV in `experiments/results/`;
+nothing is typed by hand.
+
+| in the paper | script | raw results | time |
+|---|---|---|---|
+| random precedence forests (table and text) | `forest_fixing.py`, `forest_fixing_table.py` | `forest_fixing.csv` | ~2 min |
+| PCKP benchmark: faces, fixing, gap (table and text) | `literature_fixing.py`, `literature_fixing_table.py` | `literature_fixing.csv` | ~15 min |
+| PCKP benchmark: time of the strongest reduced costs, per item vs incremental (table column and text) | `rc_timing.py` | `rc_timing.csv` | ~4 min |
+| PCKP benchmark: Gurobi with and without fixing (text) | `bb_fixing.py --variants base,best`, `bb_table.py` | `bb_fixing.csv` | ~30 min |
+
+The LaTeX rows and macros go to `experiments/results/tables/`. All runs use one
+thread; the instances run one at a time, each in a memory-capped process.
+
+### Random precedence forests
+
 ```bash
 python experiments/forest_fixing.py --out experiments/results/forest_fixing.csv
 python experiments/forest_fixing_table.py experiments/results/forest_fixing.csv \
@@ -197,6 +214,57 @@ at its own capacity, it records:
 
 Each instance runs in its own memory-capped process, so a large instance
 cannot exhaust the machine.
+
+### Computing the strongest reduced costs fast
+
+```bash
+python experiments/rc_timing.py --out experiments/results/rc_timing.csv
+```
+
+The strongest reduced cost of an item is a maximum-closure problem, and solving
+one per item from scratch is the baseline (`cold`). The C++ engine
+(`cpp/rc_engine.cpp`, built with `g++ -O3` on first use by `macroitems.fastrc`)
+exploits that, at a nondegenerate capacity, the maximum closure of the null
+region is empty:
+
+* one maximum flow is computed in Picard's network, and it saturates every
+  source arc; the reduced cost of item `i` is the largest flow that can be
+  *added* from `i` to the sink in its residual network (`warm`);
+* the exact distances to the sink are computed once by a breadth-first search,
+  and every item pushes its additional flow by shortest augmenting paths from
+  these labels, with the gap rule and the upper bound `-b(cl(i))`; the
+  capacities and labels changed are undone afterwards (`sap`);
+* the items are visited along a tree of prerequisites: the flow of the parent
+  is kept while its descendants are processed, so that each item pays only for
+  the difference (`tree`, the default).
+
+The same holds on the full region with the arcs reversed. The inseparability
+classes come from the same idea: on the split macroitem the maximum closure has
+value 0, and the smallest tight set containing `i` is the set reachable from
+`i` in the residual network of one maximum flow (strongly connected components
+and a bitset propagation). Everything is exact, in 64-bit integer arithmetic
+after scaling the data. On the 23 benchmark instances `tree` takes 2.3 s in
+total, against 125 s for `cold`, and all engines return identical values
+(`tests/test_fastrc.py` also checks them against the reference on hundreds of
+random instances).
+
+### Gurobi with and without fixing
+
+```bash
+python experiments/bb_fixing.py --variants base,best --worker-cap-gb 8 --mem-limit-gb 4 \
+       --out experiments/results/bb_fixing.csv
+python experiments/bb_table.py experiments/results/rc_timing.csv experiments/results/bb_fixing.csv \
+       --rows experiments/results/tables/bb_fixing.tex --macros experiments/results/tables/bb_fixing_macros.tex
+```
+
+Each instance is solved by Gurobi (one thread, zero gap, seeds 1, 2, 3) on the
+full model (`base`) and after fixing the items whose strongest reduced cost
+exceeds `z(c) - LB` (`best`), where `LB` is the macroitem heuristic, passed to
+both runs as a cutoff. The script checks that both reach the same optimum. The
+time of the reduced costs is charged to `best`. Outcome: up to 2.1× faster on
+the telecommunication instances where most of `Z` is fixed, unchanged on the
+mining instances; the number of nodes does not decrease systematically. W needs
+the larger memory caps above.
 
 ## Instances
 

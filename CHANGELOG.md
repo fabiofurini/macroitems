@@ -4,6 +4,16 @@
 
 ### Added
 
+* **`macroitems.fastrc`** and **`cpp/rc_engine.cpp`**: exact strongest
+  reduced costs by incremental maximum flows (one base flow, additional flow
+  per item by shortest augmenting paths from exact distance labels with the
+  gap rule, items visited along a tree of prerequisites, changes undone), and
+  the smallest tight sets by residual reachability. 2.3 s instead of 125 s on
+  the PCKP benchmark; `minimal_tight_sets` uses it unless
+  `MACROITEMS_NO_FAST` is set.
+* **`experiments/rc_timing.py`**: times of the engines on the benchmark.
+* **`experiments/bb_fixing.py`** and **`bb_table.py`**: Gurobi with and without
+  fixing by the strongest reduced costs, several seeds, memory-capped workers.
 * **`macroitems.classes`**: `split_structure` gives, at a nondegenerate
   capacity:
   * the inseparability classes of the split macroitem and their order;
