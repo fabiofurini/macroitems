@@ -17,8 +17,9 @@ records:
   sets of reduced costs:
   * those of the dual optimum returned by HiGHS through SciPy (``solver``);
   * the canonical ones (``canonical``);
-  * the strongest ones over the dual optimal face, computed with one minimum
-    cut per item (``best``).
+  * the strongest ones over the dual optimal face (``best``), computed by the
+    C++ engine of ``macroitems.fastrc``: warm-started maximum flows, pushed
+    incrementally along a tree of prerequisites.
 
 The instances are third-party data and are not in the repository.  Download them
 once with::
@@ -46,7 +47,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from macroitems import canonical_path, face_dimensions, solution_from_path  # noqa: E402
 from macroitems.classes import split_structure  # noqa: E402
-from macroitems.dual import best_reduced_costs, canonical_reduced_costs  # noqa: E402
+from macroitems.dual import canonical_reduced_costs  # noqa: E402
+from macroitems.fastrc import fast_reduced_costs  # noqa: E402
 from macroitems.formats import read_pckp_dat  # noqa: E402
 from macroitems.stats import heuristic_integer  # noqa: E402
 from forest_fixing import environment, solver_reduced_costs  # noqa: E402
@@ -125,9 +127,10 @@ def run_one(path_dat, best_known, time_limit):
     z_hs, s_sol, mu_sol = solver_reduced_costs(inst, c)
     assert abs(z_hs - sol.value) <= 1e-6 * max(1.0, abs(sol.value)), (z_hs, sol.value)
     canon = canonical_reduced_costs(inst, path, sol.h)
-    t1 = time.perf_counter()
-    best = best_reduced_costs(inst, sol).value
-    t_rc = time.perf_counter() - t1
+    # strongest reduced costs: C++ engine, warm-started incremental maximum flows;
+    # the time is the one measured inside the C++ library
+    best, rc_stats = fast_reduced_costs(inst, sol, "tree", return_stats=True)
+    t_rc = sum(rc_stats[r][2] for r in ("Z", "F") if r in rc_stats)
     fixed = lambda rc, region, g=gap: int(np.sum(rc[region] > g + TOL))
     gap_heur = sol.value - heur
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -145,7 +148,7 @@ def run_one(path_dat, best_known, time_limit):
                lb_heur=heur, fix_Z_solver_heur=fixed(s_sol, Z, gap_heur),
                fix_Z_best_heur=fixed(best, Z, gap_heur), fix_F_best_heur=fixed(best, F, gap_heur),
                rc_gain_median=round(float(np.median(gain[np.isfinite(gain)])), 3),
-               seconds_rc=round(t_rc, 2), seconds_classes=round(t_cl, 2),
+               seconds_rc=round(t_rc, 4), seconds_classes=round(t_cl, 2),
                seconds=round(time.perf_counter() - t0, 2))
     return row
 

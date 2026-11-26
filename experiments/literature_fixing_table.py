@@ -49,7 +49,7 @@ def main(argv=None):
             cells = [r["n"], r["m"], r["H"], r["Z"], r["dim_dual"], f"{gap(r):.1f}",
                      f"{pct(r, 'fix_Z_solver'):.1f}",
                      f"{pct(r, 'fix_Z_best'):.1f}", f"{pct(r, 'fix_Z_best_heur'):.1f}",
-                     f"{float(r['seconds_rc']):.1f}"]
+                     f"{float(r['seconds_rc']):.3f}"]
             body.append(f"{name}{star} & " + " & ".join(g(c) for c in cells) + "\\\\")
     best = [pct(r, "fix_Z_best") for r in ok]
     solver = [pct(r, "fix_Z_solver") for r in ok]
@@ -77,8 +77,9 @@ def main(argv=None):
         "litZsolverHeurMax": f"{max(pct(r, 'fix_Z_solver_heur') for r in ok):.1f}",
         "litDimDualMin": f"{min(int(r['dim_dual']) for r in ok):,}".replace(",", "{,}"),
         "litDimDualMax": f"{max(int(r['dim_dual']) for r in ok):,}".replace(",", "{,}"),
-        "litRcTimeMax": str(half_up(max(float(r["seconds_rc"]) for r in ok))),
-        "litRcTimeMedian": f"{statistics.median(float(r['seconds_rc']) for r in ok):.1f}",
+        "litRcTimeMax": f"{max(float(r['seconds_rc']) for r in ok):.2f}",
+        "litRcTimeMedian": f"{statistics.median(float(r['seconds_rc']) for r in ok):.3f}",
+        "litRcTimeTotal": f"{sum(float(r['seconds_rc']) for r in ok):.1f}",
         "litGainMin": str(half_up(min(gains))), "litGainMax": str(half_up(max(gains))),
         "litGainMedian": str(half_up(statistics.median(gains))),
     }

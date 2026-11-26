@@ -17,6 +17,7 @@ an arc (i, j) of A(H) enters a tight set iff i not in T_j.
 from __future__ import annotations
 
 import dataclasses
+import os
 import time
 
 import numpy as np
@@ -58,6 +59,19 @@ def minimal_tight_sets(inst: Instance, sol: LPSolution, max_H: int = 20000):
     per item of ``H``.
     """
     H = sol.H
+    fast = None
+    if not os.environ.get("MACROITEMS_NO_FAST"):  # fast path: one maximum flow + reachability (C++)
+        try:
+            from .fastrc import fast_tight_sets
+            fast = fast_tight_sets(inst, sol)
+        except (OSError, RuntimeError, ImportError):
+            fast = None
+    if fast is not None:
+        nodes, Tm = fast
+        if nodes.size > max_H:
+            raise ValueError(f"|H| = {nodes.size} too large for the tight-set computation (max_H={max_H})")
+        sub, _ = inst.induced(nodes)
+        return nodes, sub, Tm, 1
     nodes = np.flatnonzero(H)
     k = nodes.size
     if k > max_H:

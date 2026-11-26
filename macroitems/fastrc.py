@@ -124,3 +124,47 @@ def fast_reduced_costs(inst: Instance, sol: LPSolution, engine: str = "warm",
         stats["F"] = st
     stats["seconds"] = time.perf_counter() - t0
     return (out, stats) if return_stats else out
+
+
+def fast_tight_sets(inst: Instance, sol: LPSolution):
+    """Smallest tight subset of H containing each item of H, via one maximum flow and the
+    reachability of its residual network (C++).  Returns ``(nodes, Tm)`` with the same
+    meaning as :func:`macroitems.faces.minimal_tight_sets`, or ``None`` when the data
+    cannot be scaled to 64-bit integers (the caller then uses the reference method)."""
+    scale = 1
+    if not inst.is_integral():
+        inst, scale = inst.scaled_to_integers()
+        if not inst.is_integral():
+            return None
+    nodes = np.flatnonzero(sol.H)
+    k = nodes.size
+    P, W = int(round(inst.p[sol.H].sum())), int(round(inst.w[sol.H].sum()))
+    g = gcd(abs(P), W) or 1
+    P, W = P // g, W // g
+    b = [W * int(round(inst.p[i])) - P * int(round(inst.w[i])) for i in nodes]
+    G = 0
+    for x in b:
+        G = gcd(G, abs(x))
+    G = G or 1
+    b = np.array([x // G for x in b], dtype=np.int64) if True else None
+    if int(np.abs(b).sum()) >= 2 ** 61:
+        return None
+    pos = -np.ones(inst.n, dtype=np.int64)
+    pos[nodes] = np.arange(k)
+    a = inst.arcs
+    keep = sol.H[a[:, 0]] & sol.H[a[:, 1]] if inst.m else np.zeros(0, bool)
+    u, v = pos[a[keep, 0]].astype(np.int32), pos[a[keep, 1]].astype(np.int32)
+    Tm = np.zeros((k, k), dtype=np.uint8)
+    stats = np.zeros(2)
+    lib = _library()
+    if not hasattr(lib, "_tight_ready"):
+        lib.tight_sets.restype = ctypes.c_int
+        lib.tight_sets.argtypes = [ctypes.c_int, ctypes.c_int,
+                                   np.ctypeslib.ndpointer(np.int32), np.ctypeslib.ndpointer(np.int32),
+                                   np.ctypeslib.ndpointer(np.int64), np.ctypeslib.ndpointer(np.uint8),
+                                   np.ctypeslib.ndpointer(np.float64)]
+        lib._tight_ready = True
+    rc = lib.tight_sets(int(k), int(u.size), u, v, b, Tm, stats)
+    if rc != 0:
+        return None
+    return nodes, Tm.astype(bool)

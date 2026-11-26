@@ -425,3 +425,92 @@ extern "C" int rc_region(int n, int m, const int* tail, const int* head, const i
     }
     return 0;
 }
+
+// ---------------------------------------------------------------------------------
+// Smallest tight subsets of the split macroitem, for every item at once.
+//
+// On H the values b satisfy b(L) <= 0 for every closed L, with equality exactly for the
+// tight subsets, and b(H) = 0; hence the maximum closure value is 0 and a maximum flow f0
+// in Picard's network saturates every source arc.  Forcing i adds an infinite arc s -> i:
+// if the sink is reachable from i in the residual network of f0 (s excluded), the forced
+// value is negative and the only tight subset containing i is H; otherwise the smallest
+// optimal closure containing i is exactly the set R(i) reachable from i.  All the sets R(i)
+// come from one strongly-connected-component pass and a bitset propagation on the
+// condensation, so the whole computation costs one maximum flow plus O(k m / 64).
+// Output: Tm[i * n + j] = 1 iff j belongs to the smallest tight subset containing i.
+extern "C" int tight_sets(int n, int m, const int* tail, const int* head, const i64* val,
+                          unsigned char* Tm, double* stats) {
+    using clk = std::chrono::steady_clock;
+    auto t0 = clk::now();
+    const int s = n, t = n + 1;
+    i64 sumPos = 0, sumAbs = 0;
+    for (int i = 0; i < n; ++i) { if (val[i] > 0) sumPos += val[i]; sumAbs += val[i] > 0 ? val[i] : -val[i]; }
+    const i64 INF = sumAbs + 1;
+    std::vector<int> U, V; std::vector<i64> C;
+    for (int k = 0; k < m; ++k) { U.push_back(tail[k]); V.push_back(head[k]); C.push_back(INF); }
+    for (int i = 0; i < n; ++i) {
+        if (val[i] > 0) { U.push_back(s); V.push_back(i); C.push_back(val[i]); }
+        else if (val[i] < 0) { U.push_back(i); V.push_back(t); C.push_back(-val[i]); }
+    }
+    Csr g; std::vector<int> idOf; g.build(n + 2, U, V, C, idOf);
+    Dinic d(g);
+    if (d.maxflow(s, t, -1, sumPos) != sumPos) return -1;   // maximum closure value is not 0
+    // residual graph on V' = {0..n-1, t}; t gets index n
+    const int Np = n + 1;
+    auto idx = [&](int v) { return v == t ? n : v; };
+    std::vector<int> ofirst(Np + 1, 0), radj, rfirst(Np + 1, 0), tadj;
+    std::vector<std::pair<int,int>> E;
+    for (int u = 0; u < n + 2; ++u) {
+        if (u == s) continue;
+        for (int a = g.first[u]; a < g.first[u + 1]; ++a)
+            if (g.cap[a] > 0 && g.to[a] != s) E.push_back({idx(u), idx(g.to[a])});
+    }
+    for (auto& e : E) { ++ofirst[e.first + 1]; ++rfirst[e.second + 1]; }
+    for (int v = 0; v < Np; ++v) { ofirst[v + 1] += ofirst[v]; rfirst[v + 1] += rfirst[v]; }
+    radj.assign(E.size(), 0); tadj.assign(E.size(), 0);
+    { std::vector<int> fo(ofirst.begin(), ofirst.end() - 1), fr(rfirst.begin(), rfirst.end() - 1);
+      for (auto& e : E) { radj[fo[e.first]++] = e.second; tadj[fr[e.second]++] = e.first; } }
+    // Kosaraju, iterative: components come out in topological order of the condensation
+    std::vector<int> orderv; orderv.reserve(Np);
+    std::vector<char> seen(Np, 0);
+    std::vector<std::pair<int,int>> st;
+    for (int r = 0; r < Np; ++r) if (!seen[r]) {
+        seen[r] = 1; st.push_back({r, ofirst[r]});
+        while (!st.empty()) {
+            auto& [u, a] = st.back();
+            if (a < ofirst[u + 1]) { int v = radj[a++]; if (!seen[v]) { seen[v] = 1; st.push_back({v, ofirst[v]}); } }
+            else { orderv.push_back(u); st.pop_back(); }
+        }
+    }
+    std::vector<int> comp(Np, -1), stack2; int nc = 0;
+    for (int k = Np - 1; k >= 0; --k) {
+        int r = orderv[k]; if (comp[r] >= 0) continue;
+        comp[r] = nc; stack2.push_back(r);
+        while (!stack2.empty()) { int u = stack2.back(); stack2.pop_back();
+            for (int b = rfirst[u]; b < rfirst[u + 1]; ++b) { int v = tadj[b]; if (comp[v] < 0) { comp[v] = nc; stack2.push_back(v); } } }
+        ++nc;
+    }
+    // reach bitsets, sinks of the condensation first (reverse topological order)
+    const int W = (Np + 63) / 64;
+    std::vector<uint64_t> reach((size_t)nc * W, 0);
+    std::vector<std::vector<int>> members(nc);
+    for (int v = 0; v < Np; ++v) members[comp[v]].push_back(v);
+    for (int c = nc - 1; c >= 0; --c) {
+        uint64_t* R = &reach[(size_t)c * W];
+        for (int v : members[c]) {
+            R[v >> 6] |= 1ULL << (v & 63);
+            for (int a = ofirst[v]; a < ofirst[v + 1]; ++a) {
+                int cw = comp[radj[a]];
+                if (cw != c) { const uint64_t* Q = &reach[(size_t)cw * W]; for (int k = 0; k < W; ++k) R[k] |= Q[k]; }
+            }
+        }
+    }
+    for (int i = 0; i < n; ++i) {
+        const uint64_t* R = &reach[(size_t)comp[i] * W];
+        unsigned char* row = Tm + (size_t)i * n;
+        if (R[n >> 6] >> (n & 63) & 1ULL) { std::fill(row, row + n, (unsigned char)1); continue; }
+        for (int j = 0; j < n; ++j) row[j] = (unsigned char)(R[j >> 6] >> (j & 63) & 1ULL);
+    }
+    if (stats) { stats[0] = std::chrono::duration<double>(clk::now() - t0).count(); stats[1] = nc; }
+    return 0;
+}
