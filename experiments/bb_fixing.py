@@ -54,7 +54,7 @@ FIELDS = ["name", "family", "n", "m", "variant", "seed", "fixed0", "fixed1", "lb
           "status", "obj", "bound", "nodes", "grb_seconds", "rc_seconds", "total_seconds"]
 
 
-def solve(inst, c, lb, fix0, fix1, seed, time_limit):
+def solve(inst, c, lb, fix0, fix1, seed, time_limit, mem_limit_gb=MEM_LIMIT_GB):
     import gurobipy as gp
 
     env = gp.Env(empty=True)
@@ -66,7 +66,7 @@ def solve(inst, c, lb, fix0, fix1, seed, time_limit):
     m.Params.Seed = seed
     m.Params.TimeLimit = time_limit
     m.Params.MIPGap = 0.0
-    m.Params.MemLimit = MEM_LIMIT_GB
+    m.Params.MemLimit = mem_limit_gb
     m.Params.NodefileStart = 0.5
     m.Params.Cutoff = lb + 0.5                 # integer data: only strictly better solutions
     lbv = np.zeros(inst.n)
@@ -91,7 +91,7 @@ def solve(inst, c, lb, fix0, fix1, seed, time_limit):
     return status, obj, bound, nodes, secs
 
 
-def run_instance(path_dat, seeds, time_limit):
+def run_instance(path_dat, seeds, time_limit, variants=VARIANTS, mem_limit_gb=MEM_LIMIT_GB):
     inst = read_pckp_dat(path_dat)
     c = float(inst.meta["capacity"])
     path = canonical_path(inst)
@@ -109,10 +109,10 @@ def run_instance(path_dat, seeds, time_limit):
                  np.flatnonzero(F & (np.nan_to_num(best, nan=-np.inf) > gap + TOL))),
     }
     rows = []
-    for v in VARIANTS:
+    for v in variants:
         f0, f1 = fixes[v]
         for seed in seeds:
-            status, obj, bound, nodes, secs = solve(inst, c, lb, f0, f1, seed, time_limit)
+            status, obj, bound, nodes, secs = solve(inst, c, lb, f0, f1, seed, time_limit, mem_limit_gb)
             extra = rc_secs if v == "best" else 0.0
             rows.append(dict(name=inst.name, n=inst.n, m=inst.m, variant=v, seed=seed,
                              fixed0=len(f0), fixed1=len(f1), lb=lb, z_lp=sol.value, status=status,
@@ -131,13 +131,16 @@ def main(argv=None):
     ap.add_argument("--seeds", default="1,2,3")
     ap.add_argument("--time-limit", type=float, default=600.0)
     ap.add_argument("--only", default="")
+    ap.add_argument("--variants", default=",".join(VARIANTS))
+    ap.add_argument("--mem-limit-gb", type=float, default=MEM_LIMIT_GB, help="Gurobi MemLimit")
+    ap.add_argument("--worker-cap-gb", type=float, default=WORKER_AS_GB, help="address-space cap of a worker")
     ap.add_argument("--worker", help=argparse.SUPPRESS)
     ap.add_argument("--worker-out", help=argparse.SUPPRESS)
     a = ap.parse_args(argv)
     seeds = [int(s) for s in a.seeds.split(",")]
     if a.worker:
         with open(a.worker_out, "w") as f:
-            json.dump(run_instance(a.worker, seeds, a.time_limit), f)
+            json.dump(run_instance(a.worker, seeds, a.time_limit, a.variants.split(","), a.mem_limit_gb), f)
         return
     import resource
     import subprocess
@@ -148,7 +151,7 @@ def main(argv=None):
         keep = set(a.only.split(","))
         files = [f for f in files if os.path.basename(f).replace(".lp.dat", "") in keep]
     tmp = tempfile.mkdtemp(prefix="bbfix-")
-    cap = int(WORKER_AS_GB * 2**30)
+    cap = int(a.worker_cap_gb * 2**30)
 
     def limit():
         resource.setrlimit(resource.RLIMIT_AS, (cap, cap))
@@ -156,7 +159,7 @@ def main(argv=None):
 
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
     with open(a.out, "w", newline="") as f:
-        f.write(f"# bb_fixing.py seeds={a.seeds} time_limit={a.time_limit} lb=macroitem heuristic, "
+        f.write(f"# bb_fixing.py seeds={a.seeds} variants={a.variants} gurobi_mem_limit_gb={a.mem_limit_gb} worker_cap_gb={a.worker_cap_gb} time_limit={a.time_limit} lb=macroitem heuristic, "
                 f"passed as cutoff\n# {environment()}\n")
         wr = csv.DictWriter(f, fieldnames=FIELDS)
         wr.writeheader()
@@ -167,7 +170,8 @@ def main(argv=None):
             budget = 3 * len(seeds) * (a.time_limit + 60) + 600
             try:
                 r = subprocess.run([sys.executable, os.path.abspath(__file__), "--worker", path_dat,
-                                    "--worker-out", out, "--seeds", a.seeds, "--time-limit", str(a.time_limit)],
+                                    "--worker-out", out, "--seeds", a.seeds, "--time-limit", str(a.time_limit),
+                                    "--variants", a.variants, "--mem-limit-gb", str(a.mem_limit_gb)],
                                    preexec_fn=limit, capture_output=True, text=True, timeout=budget)
             except subprocess.TimeoutExpired:
                 print(f"{path_dat}: worker timeout", file=sys.stderr, flush=True)
