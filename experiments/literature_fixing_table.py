@@ -31,8 +31,10 @@ def main(argv=None):
     ap.add_argument("csv")
     ap.add_argument("--rows")
     ap.add_argument("--macros")
+    ap.add_argument("--rc-timing", help="CSV of rc_timing.py: adds the time of one maximum closure per item")
     a = ap.parse_args(argv)
     header, rows = load(a.csv)
+    cold = {r["name"]: float(r["sec_cold"]) for r in load(a.rc_timing)[1]} if a.rc_timing else {}
     ok = [r for r in rows if r["status"] == "ok"]
     g = lambda x: "\\gen{" + x + "}"
     pct = lambda r, k: 100 * int(r[k]) / int(r["Z"]) if int(r["Z"]) else 0.0
@@ -50,6 +52,8 @@ def main(argv=None):
                      f"{pct(r, 'fix_Z_solver'):.1f}",
                      f"{pct(r, 'fix_Z_best'):.1f}", f"{pct(r, 'fix_Z_best_heur'):.1f}",
                      f"{float(r['seconds_rc']):.3f}"]
+            if cold:
+                cells.insert(len(cells) - 1, f"{cold[r['name']]:.2f}")
             body.append(f"{name}{star} & " + " & ".join(g(c) for c in cells) + "\\\\")
     best = [pct(r, "fix_Z_best") for r in ok]
     solver = [pct(r, "fix_Z_solver") for r in ok]

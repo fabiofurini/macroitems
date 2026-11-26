@@ -1,4 +1,4 @@
-"""LaTeX for the table of computing times on the PCKP benchmark, generated from
+"""LaTeX for the table (and the macros quoted in the text) of computing times on the PCKP benchmark, generated from
 the CSVs of ``rc_timing.py`` and ``bb_fixing.py`` (variants base and best).
 
 For each instance: the share of the items of ``Z`` fixed by the strongest
